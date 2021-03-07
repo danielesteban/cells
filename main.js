@@ -81,13 +81,13 @@ const test = (x, y) => {
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
 const minFlow = 0.1;
-const getStableState = (total_mass) => {
-  if (total_mass <= 1) {
+const getStableState = (totalMass) => {
+  if (totalMass <= 1) {
     return 1;
-  } else if (total_mass < 2 * maxMass + maxCompress) {
-    return (maxMass ** 2 + total_mass * maxCompress) / (maxMass + maxCompress);
+  } else if (totalMass < 2 * maxMass + maxCompress) {
+    return (maxMass ** 2 + totalMass * maxCompress) / (maxMass + maxCompress);
   }
-  return (total_mass + maxCompress) / 2;
+  return (totalMass + maxCompress) / 2;
 };
 
 // Main loop
