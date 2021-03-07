@@ -111,7 +111,7 @@ const animate = () => {
   for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action !== false) {
-      for (let i = 0; i < 6; i += 1) {
+      for (let j = 0; j < 6; j += 1) {
         const px = Math.min(Math.max(Math.floor(input.x + (Math.random() - 0.5) * 5), 0), width - 1);
         const py = Math.min(Math.max(Math.floor(input.y + (Math.random() - 0.5) * 5), 0), height - 1);
         const index = cellIndex(px, py);
@@ -256,12 +256,12 @@ const animate = () => {
     if (cells[i] !== types.air) {
       continue;
     }
-    const m = water.state[i];
-    if (m >= 0.001) {
+    const mass = water.state[i];
+    if (mass >= 0.001) {
       pixels.data.set([
         0x22,
-        0x44 * (2 - Math.min(Math.max(m, 1), 1.25)),
-        0x88 * (2 - Math.min(Math.max(m, 1), 1.25)),
+        0x44 * (2 - Math.min(Math.max(mass, 1), 1.25)),
+        0x88 * (2 - Math.min(Math.max(mass, 1), 1.25)),
       ], i * 4);
     } else {
       pixels.data.set(air, i * 4);
