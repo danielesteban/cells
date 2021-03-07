@@ -71,7 +71,7 @@ const test = (x, y) => {
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
-const minFlow = 0.1; // Used to smooth the flow
+const minFlow = 0.1; // This is used to smooth the flow
 const getStableState = (totalMass) => {
   if (totalMass <= 1) {
     return 1;
