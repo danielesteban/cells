@@ -260,7 +260,7 @@ const animate = () => {
   }
 
   // Update air/water pixels
-  for (let i = 0, l = (width * height); i < l; i += 1) {
+  for (let i = 0; i < (width * height); i += 1) {
     if (cells[i] !== types.air) {
       continue;
     }
