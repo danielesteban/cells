@@ -239,7 +239,7 @@ const animate = () => {
       water.step[massIndex(width - 1, y)] = 0;
     }
 
-    // Copy the new mass values the state array
+    // Copy the new mass values into the state array
     water.state.set(water.step);
   }
 
