@@ -66,8 +66,7 @@ const test = (x, y) => {
     return -1;
   }
   const index = cellIndex(x, y);
-  const type = cells[index];
-  return type === types.air ? index : false;
+  return cells[index] === types.air ? index : false;
 };
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
