@@ -170,8 +170,8 @@ const animate = () => {
     }
 
     // Simulate water
-    for (let y = 1; y < (height - 1); y += 1) {
-      for (let x = 1; x < (width - 1); x += 1) {
+    for (let x = 1; x < (width - 1); x += 1) {
+      for (let y = 1; y < (height - 1); y += 1) {
         if (pixels.data[renderer.index(x, y) + 3] !== types.air) {
           continue;
         }
