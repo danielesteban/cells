@@ -26,8 +26,7 @@ class Renderer {
     const clear = document.createElement('button');
     clear.innerText = 'CLEAR';
     clear.addEventListener('click', () => {
-      this.pixels.data.fill(0);
-      onClear();
+      clearPixels();
     });
     ui.appendChild(clear);
 
@@ -55,6 +54,13 @@ class Renderer {
     this.resize();
     window.addEventListener('resize', this.resize.bind(this));
 
+    const clearPixels = () => {
+      for (let i = 0, l = this.pixels.data.length; i < l; i += 4) {
+        this.pixels.data.set([0, 0, 0], i);
+      }
+      onClear();
+    };
+
     // Input mapping
     this.input = { action: false, touch: false, type: 0x01, x: 0, y: 0 };
     updateUI();
@@ -66,8 +72,7 @@ class Renderer {
     document.addEventListener('keydown', ({ keyCode, repeat }) => {
       if (repeat) return;
       if (keyCode === 27) {
-        this.pixels.data.fill(0);
-        onClear();
+        clearPixels();
       } else if (keyCode >= 49 && keyCode <= 51) {
         this.input.type = keyCode - 48;
         updateUI();
