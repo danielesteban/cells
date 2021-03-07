@@ -162,29 +162,30 @@ const animate = () => {
         for (let sx = 0; sx < width; sx += 1) {
           const x = s ? sx : (width - 1 - sx);
           const index = cellIndex(x, y);
-          if (cells[index] === types.sand) {
-            const target = (
-              test(x, y - 1)
-              || test(x - nx, y - 1)
-              || test(x + nx, y - 1)
-              || test(x + nx * 2, y - 1)
-              || test(x - nx * 2, y - 1)
-            );
-            if (target !== false) {
-              if (target >= 0) {
-                // Swap cell with target position
-                cells[index] = cells[target];
-                cells[target] = types.sand;
-                water.state[index] = water.step[index] = water.state[target];
-                water.state[target] = water.step[target] = 0;
-                cell.set(pixels.data.subarray(target * 4, (target * 4) + 3));
-                pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
-                pixels.data.set(cell, index * 4);
-              } else {
-                // Destroy cell
-                cells[index] = types.air;
-                pixels.data.set(air, index * 4);
-              }
+          if (cells[index] !== types.sand) {
+            continue;
+          }
+          const target = (
+            test(x, y - 1)
+            || test(x - nx, y - 1)
+            || test(x + nx, y - 1)
+            || test(x + nx * 2, y - 1)
+            || test(x - nx * 2, y - 1)
+          );
+          if (target !== false) {
+            if (target >= 0) {
+              // Swap cell with target position
+              cells[index] = cells[target];
+              cells[target] = types.sand;
+              water.state[index] = water.step[index] = water.state[target];
+              water.state[target] = water.step[target] = 0;
+              cell.set(pixels.data.subarray(target * 4, (target * 4) + 3));
+              pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
+              pixels.data.set(cell, index * 4);
+            } else {
+              // Destroy cell
+              cells[index] = types.air;
+              pixels.data.set(air, index * 4);
             }
           }
         }
@@ -194,59 +195,52 @@ const animate = () => {
     // Simulate water
     for (let x = 1; x < (width - 1); x += 1) {
       for (let y = 1; y < (height - 1); y += 1) {
-        if (cells[cellIndex(x, y)] !== types.air) {
+        const index = cellIndex(x, y);
+        if (cells[index] !== types.air) {
           continue;
         }
-
-        let remainingMass = water.state[cellIndex(x, y)];
-        if (remainingMass <= 0) {
-          continue;
-        }
-
-        if (cells[cellIndex(x, y - 1)] === types.air) {
-          let flow = (
-            getStableState(remainingMass + water.state[cellIndex(x, y - 1)])
-            - water.state[cellIndex(x, y - 1)]
-          );
+        let remainingMass = water.state[index];
+        for (let n = 0; remainingMass > 0 && n < 4; n += 1) {
+          let neighbor;
+          switch (n) {
+            case 0:
+              neighbor = cellIndex(x, y - 1);
+              break;
+            case 1:
+              neighbor = cellIndex(x - 1, y);
+              break;
+            case 2:
+              neighbor = cellIndex(x + 1, y);
+              break;
+            case 3:
+              neighbor = cellIndex(x, y + 1);
+              break;
+          }
+          if (cells[neighbor] !== types.air) {
+            continue;
+          }
+          let flow;
+          switch (n) {
+            case 0:
+              flow = (
+                getStableState(remainingMass + water.state[neighbor])
+                - water.state[neighbor]
+              );
+              break;
+            case 1:
+            case 2:
+              // Equalize the amount of water between neighbors
+              flow = (water.state[index] - water.state[neighbor]) / 4;
+              break;
+            case 3:
+              // Only compressed water flows upwards
+              flow = remainingMass - getStableState(remainingMass + water.state[neighbor]);
+              break;
+          }
           flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), 1, remainingMass);
-          water.step[cellIndex(x, y)] -= flow;
-          water.step[cellIndex(x, y - 1)] += flow;
+          water.step[index] -= flow;
+          water.step[neighbor] += flow;
           remainingMass -= flow;
-        }
-
-        if (remainingMass <= 0) {
-          continue;
-        }
-
-        if (cells[cellIndex(x - 1, y)] === types.air) {
-          let flow = (water.state[cellIndex(x, y)] - water.state[cellIndex(x - 1, y)]) / 4;
-          flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), remainingMass);
-          water.step[cellIndex(x, y)] -= flow;
-          water.step[cellIndex(x - 1, y)] += flow;
-          remainingMass -= flow;
-        }
-
-        if (remainingMass <= 0) {
-          continue;
-        }
-
-        if (cells[cellIndex(x + 1, y)] === types.air) {
-          let flow = (water.state[cellIndex(x, y)] - water.state[cellIndex(x + 1, y)]) / 4;
-          flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), remainingMass);
-          water.step[cellIndex(x, y)] -= flow;
-          water.step[cellIndex(x + 1, y)] += flow;
-          remainingMass -= flow;
-        }
-
-        if (remainingMass <= 0) {
-          continue;
-        }
-
-        if (cells[cellIndex(x, y + 1)] === types.air) {
-          let flow = remainingMass - getStableState(remainingMass + water.state[cellIndex(x, y + 1)]);
-          flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), 1, remainingMass);
-          water.step[cellIndex(x, y)] -= flow;
-          water.step[cellIndex(x, y + 1)] += flow;
         }
       }
     }
@@ -266,21 +260,19 @@ const animate = () => {
   }
 
   // Update air/water pixels
-  for (let x = 0; x < width; x += 1) {
-    for(let y = 0; y < height; y += 1) {
-      const index = cellIndex(x, y);
-      if (cells[index] === types.air) {
-        const m = water.state[index];
-        if (m >= 0.001) {
-          pixels.data.set([
-            0x22,
-            0x44 * (2 - Math.min(Math.max(m, 1), 1.25)),
-            0x88 * (2 - Math.min(Math.max(m, 1), 1.25)),
-          ], index * 4);
-        } else {
-          pixels.data.set(air, index * 4);
-        }
-      }
+  for (let i = 0, l = (width * height); i < l; i += 1) {
+    if (cells[i] !== types.air) {
+      continue;
+    }
+    const m = water.state[i];
+    if (m >= 0.001) {
+      pixels.data.set([
+        0x22,
+        0x44 * (2 - Math.min(Math.max(m, 1), 1.25)),
+        0x88 * (2 - Math.min(Math.max(m, 1), 1.25)),
+      ], i * 4);
+    } else {
+      pixels.data.set(air, i * 4);
     }
   }
 
