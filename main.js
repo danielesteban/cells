@@ -50,7 +50,7 @@ const types = {
   water: 0x03,
 };
 const air = new Uint8ClampedArray(3);
-const cell = new Uint8ClampedArray(3);
+const pixel = new Uint8ClampedArray(3);
 const cells = new Uint8ClampedArray(renderer.width * renderer.height);
 const water = {
   state: new Float32Array(renderer.width * renderer.height),
@@ -67,10 +67,7 @@ const cellIndex = (x, y) => {
 };
 const test = (x, y) => {
   const index = cellIndex(x, y);
-  if (index === -1 || cells[index] === types.air) {
-    return index;
-  }
-  return false;
+  return (index === -1 || cells[index] === types.air) ? index : false;
 };
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
@@ -90,7 +87,7 @@ const getStableState = (totalMass) => {
 renderer.onClear = () => {
   cells.fill(0);
   water.state.fill(0);
-  water.step.set(water.state);
+  water.step.fill(0);
 };
 for (let i = 0, l = renderer.pixels.data.length; i < l; i += 4) {
   if (
@@ -197,9 +194,9 @@ const animate = () => {
             cells[target] = types.sand;
             water.state[index] = water.step[index] = water.state[target];
             water.state[target] = water.step[target] = 0;
-            cell.set(pixels.data.subarray(target * 4, (target * 4) + 3));
+            pixel.set(pixels.data.subarray(target * 4, (target * 4) + 3));
             pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
-            pixels.data.set(cell, index * 4);
+            pixels.data.set(pixel, index * 4);
           }
         }
       }
