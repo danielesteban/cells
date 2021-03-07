@@ -1,6 +1,6 @@
 // The purpose of this class is to abstract out all the boilerplate from the main file
-// Setting up the UI and the rendering context and handling all the input.
-// Exporting just a simple api to render a bunch of pixels on an ImageData.
+// Setting up the UI and the rendering context and handling all the input
+// Exporting just a simple api to render an ImageData instance with bunch of pixels
 
 class Renderer {
   constructor({
