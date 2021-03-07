@@ -61,14 +61,14 @@ const massIndex = (x, y) => {
   const { width, height } = renderer;
   return (height - 1 - y) * width + x;
 };
-const maxMass = 1.0; // The normal, un-pressurized mass of a full water cell
+const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
 const minFlow = 0.1;
 const getStableState = (total_mass) => {
   if (total_mass <= 1) {
     return 1;
-  } else if (total_mass < (2 * maxMass) + maxCompress) {
-    return (maxMass * maxMass + total_mass * maxCompress) / (maxMass + maxCompress);
+  } else if (total_mass < 2 * maxMass + maxCompress) {
+    return (maxMass ** 2 + total_mass * maxCompress) / (maxMass + maxCompress);
   }
   return (total_mass + maxCompress) / 2;
 };
