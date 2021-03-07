@@ -75,7 +75,7 @@ const minFlow = 0.1; // Leads to smoother flow
 const getStableState = (totalMass) => {
   if (totalMass <= 1) {
     return 1;
-  } else if (totalMass < 2 * maxMass + maxCompress) {
+  } else if (totalMass < maxMass * 2 + maxCompress) {
     return (maxMass ** 2 + totalMass * maxCompress) / (maxMass + maxCompress);
   }
   return (totalMass + maxCompress) / 2;
@@ -111,9 +111,10 @@ const animate = () => {
     // Process Input
     if (input.action !== false) {
       for (let j = 0; j < 6; j += 1) {
-        const px = Math.min(Math.max(Math.floor(input.x + (Math.random() - 0.5) * 5), 0), width - 1);
-        const py = Math.min(Math.max(Math.floor(input.y + (Math.random() - 0.5) * 5), 0), height - 1);
-        const index = cellIndex(px, py);
+        const index = cellIndex(
+          Math.min(Math.max(Math.floor(input.x + (Math.random() - 0.5) * 5), 0), width - 1),
+          Math.min(Math.max(Math.floor(input.y + (Math.random() - 0.5) * 5), 0), height - 1)
+        );
         switch (input.action) {
           case actions.erase:
             cells[index] = types.air;
