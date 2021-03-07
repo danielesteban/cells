@@ -170,8 +170,8 @@ const animate = () => {
     }
 
     // Simulate sand
-    if (step % 4 === 0) {
-      const s = step % 8 === 0;
+    if (step % 2 === 0) {
+      const s = step % 4 === 0;
       const nx = s ? 1 : -1;
       for (let y = 0; y < height; y += 1) {
         for (let sx = 0; sx < width; sx += 1) {
