@@ -36,6 +36,12 @@ const actions = {
   erase: 0x02,
   paint: 0x00,
 };
+const neighbors = [
+  { x: 0, y: -1 },
+  { x: -1, y: 0 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+];
 const types = {
   air: 0x00,
   clay: 0x01,
@@ -66,7 +72,7 @@ const test = (x, y) => {
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
-const minFlow = 0.1;
+const minFlow = 0.1; // Leads to smoother flow
 const getStableState = (totalMass) => {
   if (totalMass <= 1) {
     return 1;
@@ -201,43 +207,29 @@ const animate = () => {
         }
         let remainingMass = water.state[index];
         for (let n = 0; remainingMass > 0 && n < 4; n += 1) {
-          let neighbor;
-          switch (n) {
-            case 0:
-              neighbor = cellIndex(x, y - 1);
-              break;
-            case 1:
-              neighbor = cellIndex(x - 1, y);
-              break;
-            case 2:
-              neighbor = cellIndex(x + 1, y);
-              break;
-            case 3:
-              neighbor = cellIndex(x, y + 1);
-              break;
-          }
+          const neighbor = cellIndex(neighbors[n].x, neighbors[n].y);
           if (cells[neighbor] !== types.air) {
             continue;
           }
           let flow;
           switch (n) {
-            case 0:
+            case 0: // Down
               flow = (
                 getStableState(remainingMass + water.state[neighbor])
                 - water.state[neighbor]
               );
               break;
-            case 1:
-            case 2:
+            case 1: // Left
+            case 2: // Right
               // Equalize the amount of water between neighbors
               flow = (water.state[index] - water.state[neighbor]) / 4;
               break;
-            case 3:
+            case 3: // Up
               // Only compressed water flows upwards
               flow = remainingMass - getStableState(remainingMass + water.state[neighbor]);
               break;
           }
-          flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), 1, remainingMass);
+          flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), remainingMass, 1);
           water.step[index] -= flow;
           water.step[neighbor] += flow;
           remainingMass -= flow;
