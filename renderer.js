@@ -3,7 +3,6 @@ class Renderer {
     width,
     height,
     dom,
-    onClear,
     pixels,
   }) {        
     // UI
@@ -25,9 +24,7 @@ class Renderer {
     ui.appendChild(this.debug);
     const clear = document.createElement('button');
     clear.innerText = 'CLEAR';
-    clear.addEventListener('click', () => {
-      clearPixels();
-    });
+    clear.addEventListener('click', this.clear.bind(this));
     ui.appendChild(clear);
 
     // Setup rasterizer & upscaler
@@ -54,13 +51,6 @@ class Renderer {
     this.resize();
     window.addEventListener('resize', this.resize.bind(this));
 
-    const clearPixels = () => {
-      for (let i = 0, l = this.pixels.data.length; i < l; i += 4) {
-        this.pixels.data.set([0, 0, 0], i);
-      }
-      onClear();
-    };
-
     // Input mapping
     this.input = { action: false, touch: false, type: 0x01, x: 0, y: 0 };
     updateUI();
@@ -72,7 +62,7 @@ class Renderer {
     document.addEventListener('keydown', ({ keyCode, repeat }) => {
       if (repeat) return;
       if (keyCode === 27) {
-        clearPixels();
+        this.clear();
       } else if (keyCode >= 49 && keyCode <= 51) {
         this.input.type = keyCode - 48;
         updateUI();
@@ -130,6 +120,16 @@ class Renderer {
       this.input.action = false;
       this.input.touch = false;
     });
+  }
+
+  clear() {
+    const { onClear, pixels } = this;
+    for (let i = 0, l = pixels.data.length; i < l; i += 4) {
+      pixels.data.set([0, 0, 0], i);
+    }
+    if (onClear) {
+      onClear();
+    }
   }
 
   render() {
