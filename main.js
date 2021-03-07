@@ -59,14 +59,17 @@ const water = {
 
 const cellIndex = (x, y) => {
   const { width, height } = renderer;
-  return (height - 1 - y) * width + x;
-};
-const test = (x, y) => {
-  if (x < 0 || x >= renderer.width || y < 0 || y >= renderer.height) {
+  if (x < 0 || x >= width || y < 0 || y >= height) {
     // Out of bounds
     return -1;
   }
+  return (height - 1 - y) * width + x;
+};
+const test = (x, y) => {
   const index = cellIndex(x, y);
+  if (index === -1) {
+    return -1;
+  }
   return cells[index] === types.air ? index : false;
 };
 
@@ -201,52 +204,43 @@ const animate = () => {
     }
 
     // Simulate water
-    for (let x = 1; x < (width - 1); x += 1) {
-      for (let y = 1; y < (height - 1); y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      for (let y = 0; y < height; y += 1) {
         const index = cellIndex(x, y);
         if (cells[index] !== types.air) {
           continue;
         }
-        let remainingMass = water.state[index];
+        const mass = water.state[index];
+        let remainingMass = mass;
         for (let n = 0; remainingMass > 0 && n < 4; n += 1) {
           const neighbor = cellIndex(x + neighbors[n].x, y + neighbors[n].y);
-          if (cells[neighbor] !== types.air) {
+          if (neighbor !== -1 && cells[neighbor] !== types.air) {
             continue;
           }
+          const neighborMass = neighbor !== -1 ? water.state[neighbor] : 0;
           let flow;
           switch (n) {
             case 0: // Down
-              flow = (
-                getStableState(remainingMass + water.state[neighbor])
-                - water.state[neighbor]
-              );
+              flow = getStableState(remainingMass + neighborMass) - neighborMass;
               break;
             case 1: // Left
             case 2: // Right
               // Equalize the amount of water between neighbors
-              flow = (water.state[index] - water.state[neighbor]) / 4;
+              flow = (mass - neighborMass) / 4;
               break;
             case 3: // Up
               // Only compressed water flows upwards
-              flow = remainingMass - getStableState(remainingMass + water.state[neighbor]);
+              flow = remainingMass - getStableState(remainingMass + neighborMass);
               break;
           }
           flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), remainingMass, 1);
           water.step[index] -= flow;
-          water.step[neighbor] += flow;
+          if (neighbor !== -1) {
+            water.step[neighbor] += flow;
+          }
           remainingMass -= flow;
         }
       }
-    }
-
-    // Remove water at the edges
-    for (let x = 0; x < width; x += 1) {
-      water.step[cellIndex(x, 0)] = 0;
-      water.step[cellIndex(x, height - 1)] = 0;
-    }
-    for (let y = 0; y < height; y += 1) {
-      water.step[cellIndex(0, y)] = 0;
-      water.step[cellIndex(width - 1, y)] = 0;
     }
 
     // Copy the new mass values into the state array
