@@ -29,11 +29,6 @@ const renderer = new Renderer({
       ctx.fillText(text, width * 0.5, height * (0.6 + i * 0.075));
     });
   },
-  onClear: () => {
-    cells.fill(0);
-    water.state.fill(0);
-    water.step.set(water.state);
-  },
 });
 const actions = {
   // These map to mouse buttons
@@ -53,6 +48,21 @@ const water = {
   state: new Float32Array(renderer.width * renderer.height),
   step: new Float32Array(renderer.width * renderer.height),
 };
+
+renderer.onClear = () => {
+  cells.fill(0);
+  water.state.fill(0);
+  water.step.set(water.state);
+};
+for (let i = 0, l = renderer.pixels.data.length; i < l; i += 4) {
+  if (
+    renderer.pixels.data[i] !== 0
+    || renderer.pixels.data[i + 1] !== 0
+    || renderer.pixels.data[i + 2] !== 0
+  ) {
+    cells[i / 4] = types.clay;
+  }
+}
 
 const cellIndex = (x, y) => {
   const { width, height } = renderer;
@@ -79,16 +89,6 @@ const getStableState = (total_mass) => {
   }
   return (total_mass + maxCompress) / 2;
 };
-
-for (let i = 0, l = renderer.pixels.data.length; i < l; i += 4) {
-  if (
-    renderer.pixels.data[i] !== 0
-    || renderer.pixels.data[i + 1] !== 0
-    || renderer.pixels.data[i + 2] !== 0
-  ) {
-    cells[i / 4] = types.clay;
-  }
-}
 
 // Main loop
 let lastFrameTime = performance.now();
