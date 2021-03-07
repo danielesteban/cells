@@ -1,8 +1,13 @@
+// The purpose of this class is to abstract out all the boilerplate from the main file
+// Setting up the UI and the rendering context and handling all the input.
+// Exporting just a simple api to render a bunch of pixels on an ImageData.
+
 class Renderer {
   constructor({
     width,
     height,
     dom,
+    inputTypes,
     pixels,
   }) {        
     // UI
@@ -10,7 +15,7 @@ class Renderer {
     const updateUI = () => buttons.forEach((b, i) => {
       b.className = this.input.type === i + 1 ? 'active' : '';
     });
-    const buttons = ['CLAY', 'SAND', 'WATER'].map((text, i) => {
+    const buttons = inputTypes.map((text, i) => {
       const button = document.createElement('button');
       button.innerText = `${i + 1}: ${text}`;
       button.addEventListener('click', () => {
@@ -61,11 +66,12 @@ class Renderer {
       this.input.touch = false;
     });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
+    const maxTypeKeyCode = 49 + inputTypes.length;
     document.addEventListener('keydown', ({ keyCode, repeat }) => {
       if (repeat) return;
       if (keyCode === 27) {
         this.clear();
-      } else if (keyCode >= 49 && keyCode <= 51) {
+      } else if (keyCode >= 49 && keyCode < maxTypeKeyCode) {
         this.input.type = keyCode - 48;
         updateUI();
       }
