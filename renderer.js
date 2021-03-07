@@ -3,6 +3,7 @@ class Renderer {
     width,
     height,
     dom,
+    onClear,
     pixels,
   }) {        
     // UI
@@ -26,6 +27,7 @@ class Renderer {
     clear.innerText = 'CLEAR';
     clear.addEventListener('click', () => {
       this.pixels.data.fill(0);
+      onClear();
     });
     ui.appendChild(clear);
 
@@ -37,18 +39,12 @@ class Renderer {
       this.rasterizer.height = height;
       ctx.imageSmoothingEnabled = false;
       ctx.save();
-      ctx.clearRect(0, 0, width, height);
       pixels({ ctx, width, height });
       ctx.restore();
       this.pixels = ctx.getImageData(0, 0, width, height);
-      for (let i = 0, l = this.pixels.data.length; i < l; i += 4) {
-        if (this.pixels.data[i + 3] > 0) {
-          this.pixels.data[i + 3] = 0x01;
-        }
-      }
       this.rasterizerContext = ctx;
     }
-    this.upscaler = document.createElement('canvas');
+    this.upscaler = document.createElement('canvas', { alpha: false });
     this.upscalerContext = this.upscaler.getContext('2d');
     this.aspect = width / height;
     this.width = width;
@@ -71,6 +67,7 @@ class Renderer {
       if (repeat) return;
       if (keyCode === 27) {
         this.pixels.data.fill(0);
+        onClear();
       } else if (keyCode >= 49 && keyCode <= 51) {
         this.input.type = keyCode - 48;
         updateUI();
@@ -130,11 +127,6 @@ class Renderer {
     });
   }
 
-  index(x, y) {
-    const { width, height } = this;
-    return ((height - 1 - y) * width + x) * 4;
-  }
-
   render() {
     const {
       pixels,
@@ -169,8 +161,8 @@ class Renderer {
     }
     canvas.width = Math.floor(width * scale);
     canvas.height = Math.floor(height * scale);
-    ctx.globalCompositeOperation = 'copy';
     ctx.imageSmoothingEnabled = false;
+    ctx.globalCompositeOperation = 'copy';
     this.upscalerBounds = canvas.getBoundingClientRect();
   }
 }
