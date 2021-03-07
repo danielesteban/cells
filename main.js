@@ -207,7 +207,7 @@ const animate = () => {
         }
         let remainingMass = water.state[index];
         for (let n = 0; remainingMass > 0 && n < 4; n += 1) {
-          const neighbor = cellIndex(neighbors[n].x, neighbors[n].y);
+          const neighbor = cellIndex(x + neighbors[n].x, y + neighbors[n].y);
           if (cells[neighbor] !== types.air) {
             continue;
           }
