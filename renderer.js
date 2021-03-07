@@ -44,8 +44,8 @@ class Renderer {
       this.pixels = ctx.getImageData(0, 0, width, height);
       this.rasterizerContext = ctx;
     }
-    this.upscaler = document.createElement('canvas', { alpha: false });
-    this.upscalerContext = this.upscaler.getContext('2d');
+    this.upscaler = document.createElement('canvas');
+    this.upscalerContext = this.upscaler.getContext('2d', { alpha: false });
     this.aspect = width / height;
     this.width = width;
     this.height = height;
