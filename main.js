@@ -3,11 +3,11 @@ import Renderer from './renderer.js';
 // Setup
 const renderer = new Renderer({
   ...(navigator.userAgent.includes('Mobile') ? {
-    width: 150,
-    height: 250,
+    width: 140,
+    height: 260,
   } : {
-    width: 300,
-    height: 200,
+    width: 320,
+    height: 240,
   }),
   dom: document.getElementById('renderer'),
   pixels: ({ ctx, width, height }) => {
@@ -82,12 +82,12 @@ const animate = () => {
   const delta = Math.min((frameTime - lastFrameTime) / 1000, 1 / 30);
   lastFrameTime = frameTime;
 
-  const steps = Math.floor(500 * delta) * 2;
+  const steps = Math.floor(200 * delta) * 2;
   const { input, pixels, width, height } = renderer;
   for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action !== false) {
-      for (let i = 0; i < 2; i += 1) {
+      for (let i = 0; i < 6; i += 1) {
         const px = Math.min(Math.max(Math.floor(input.x + (Math.random() - 0.5) * 5), 0), width - 1);
         const py = Math.min(Math.max(Math.floor(input.y + (Math.random() - 0.5) * 5), 0), height - 1);
         const index = renderer.index(px, py);
@@ -136,8 +136,8 @@ const animate = () => {
     }
 
     // Simulate sand
-    if (step % 8 === 0) {
-      const s = step % 16 === 0;
+    if (step % 4 === 0) {
+      const s = step % 8 === 0;
       const nx = s ? 1 : -1;
       for (let y = 0; y < height; y += 1) {
         for (let sx = 0; sx < width; sx += 1) {
