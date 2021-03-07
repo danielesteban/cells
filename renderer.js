@@ -9,9 +9,33 @@ class Renderer {
     dom,
     inputTypes,
     pixels,
-  }) {        
+  }) {
+    this.aspect = width / height;
+    this.width = width;
+    this.height = height;
+
+    // Setup rasterizer & upscaler
+    this.rasterizer = document.createElement('canvas');
+    {
+      const ctx = this.rasterizer.getContext('2d', { alpha: false });
+      this.rasterizer.width = width;
+      this.rasterizer.height = height;
+      ctx.imageSmoothingEnabled = false;
+      ctx.save();
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, width, height);
+      pixels({ ctx, width, height });
+      ctx.restore();
+      this.pixels = ctx.getImageData(0, 0, width, height);
+      this.rasterizerContext = ctx;
+    }
+    this.upscaler = document.createElement('canvas');
+    this.upscalerContext = this.upscaler.getContext('2d', { alpha: false });
+    dom.appendChild(this.upscaler);
+
     // UI
-    const ui = document.getElementById('ui');
+    const ui = document.createElement('div');
+    ui.id = 'ui';
     const updateUI = () => buttons.forEach((b, i) => {
       b.className = this.input.type === i + 1 ? 'active' : '';
     });
@@ -31,30 +55,8 @@ class Renderer {
     clear.innerText = 'CLEAR';
     clear.addEventListener('click', this.clear.bind(this));
     ui.appendChild(clear);
-
-    // Setup rasterizer & upscaler
-    this.rasterizer = document.createElement('canvas');
-    {
-      const ctx = this.rasterizer.getContext('2d', { alpha: false });
-      this.rasterizer.width = width;
-      this.rasterizer.height = height;
-      ctx.imageSmoothingEnabled = false;
-      ctx.save();
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, width, height);
-      pixels({ ctx, width, height });
-      ctx.restore();
-      this.pixels = ctx.getImageData(0, 0, width, height);
-      this.rasterizerContext = ctx;
-    }
-    this.upscaler = document.createElement('canvas');
-    this.upscalerContext = this.upscaler.getContext('2d', { alpha: false });
-    this.aspect = width / height;
-    this.width = width;
-    this.height = height;
-
-    dom.appendChild(this.upscaler);
     dom.appendChild(ui);
+
     this.resize();
     window.addEventListener('resize', this.resize.bind(this));
 
