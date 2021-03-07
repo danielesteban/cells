@@ -245,8 +245,6 @@ const animate = () => {
         }
       }
     }
-
-    // Copy the new mass values into the state array
     water.state.set(water.step);
   }
 
