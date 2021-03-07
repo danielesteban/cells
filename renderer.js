@@ -143,6 +143,7 @@ class Renderer {
       height,
     } = this;
     rasterizerContext.putImageData(pixels, 0, 0);
+    upscalerContext.clearRect(0, 0, upscaler.width, upscaler.height);
     upscalerContext.drawImage(rasterizer, 0, 0, width, height, 0, 0, upscaler.width, upscaler.height);
   }
 
@@ -167,7 +168,6 @@ class Renderer {
     canvas.width = Math.floor(width * scale);
     canvas.height = Math.floor(height * scale);
     ctx.imageSmoothingEnabled = false;
-    ctx.globalCompositeOperation = 'copy';
     this.upscalerBounds = canvas.getBoundingClientRect();
   }
 }
