@@ -67,10 +67,7 @@ const cellIndex = (x, y) => {
 };
 const test = (x, y) => {
   const index = cellIndex(x, y);
-  if (index === -1) {
-    return -1;
-  }
-  if (cells[index] === types.air) {
+  if (index === -1 || cells[index] === types.air) {
     return index;
   }
   return false;
@@ -187,21 +184,22 @@ const animate = () => {
             || test(x + nx * 2, y - 1)
             || test(x - nx * 2, y - 1)
           );
-          if (target !== false) {
-            if (target >= 0) {
-              // Swap cell with target position
-              cells[index] = cells[target];
-              cells[target] = types.sand;
-              water.state[index] = water.step[index] = water.state[target];
-              water.state[target] = water.step[target] = 0;
-              cell.set(pixels.data.subarray(target * 4, (target * 4) + 3));
-              pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
-              pixels.data.set(cell, index * 4);
-            } else {
-              // Destroy cell
-              cells[index] = types.air;
-              pixels.data.set(air, index * 4);
-            }
+          if (target === false) {
+            continue;
+          }
+          if (target === -1) {
+            // Destroy cell
+            cells[index] = types.air;
+            pixels.data.set(air, index * 4);
+          } else {
+            // Swap cell with target position
+            cells[index] = cells[target];
+            cells[target] = types.sand;
+            water.state[index] = water.step[index] = water.state[target];
+            water.state[target] = water.step[target] = 0;
+            cell.set(pixels.data.subarray(target * 4, (target * 4) + 3));
+            pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
+            pixels.data.set(cell, index * 4);
           }
         }
       }
