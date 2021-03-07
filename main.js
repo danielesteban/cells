@@ -75,7 +75,8 @@ const minFlow = 0.1; // Leads to smoother flow
 const getStableState = (totalMass) => {
   if (totalMass <= 1) {
     return 1;
-  } else if (totalMass < maxMass * 2 + maxCompress) {
+  }
+  if (totalMass < maxMass * 2 + maxCompress) {
     return (maxMass ** 2 + totalMass * maxCompress) / (maxMass + maxCompress);
   }
   return (totalMass + maxCompress) / 2;
