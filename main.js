@@ -208,8 +208,8 @@ const animate = () => {
     }
 
     // Simulate water
-    for (let x = 0; x < width; x += 1) {
-      for (let y = 0; y < height; y += 1) {
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
         const index = cellIndex(x, y);
         if (cells[index] !== types.air) {
           continue;
