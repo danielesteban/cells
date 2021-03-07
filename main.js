@@ -10,6 +10,7 @@ const renderer = new Renderer({
     height: 240,
   }),
   dom: document.getElementById('renderer'),
+  inputTypes: ['CLAY', 'SAND', 'WATER'],
   pixels: ({ ctx, width, height }) => {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#339';
