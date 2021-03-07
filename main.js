@@ -78,8 +78,9 @@ const test = (x, y) => {
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
-const minFlow = 0.1; // This is used to smooth the flow
 const getStableState = (totalMass) => {
+  // This function is used to compute how water should be split among two vertically adjacent cells.
+  // It returns the amount of water that should be in the bottom cell.
   if (totalMass <= 1) {
     return 1;
   }
@@ -236,7 +237,7 @@ const animate = () => {
               flow = remainingMass - getStableState(remainingMass + neighborMass);
               break;
           }
-          flow = Math.min(Math.max(flow > minFlow ? flow * 0.5 : flow, 0), remainingMass, 1);
+          flow = Math.min(Math.max(flow > 0.1 ? flow * 0.5 : flow, 0), remainingMass, 1);
           water.step[index] -= flow;
           if (neighbor !== -1) {
             water.step[neighbor] += flow;
