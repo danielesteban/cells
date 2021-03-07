@@ -70,7 +70,10 @@ const test = (x, y) => {
   if (index === -1) {
     return -1;
   }
-  return cells[index] === types.air ? index : false;
+  if (cells[index] === types.air) {
+    return index;
+  }
+  return false;
 };
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
