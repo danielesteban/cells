@@ -50,11 +50,10 @@ class Renderer {
       ui.appendChild(group);
       return group;
     });
-    const buttons = types.map(({ id, name, color }, i) => {
-      const button = document.createElement('button');
-      button.innerText = name;
-      button.addEventListener('click', () => setType(id));
-      uiGroups[0].appendChild(button);
+    const buttons = types.map(({ id, name, color }) => {
+      color.l = (color.r + color.g + color.b) / 3;
+      color.array = new Uint8ClampedArray([color.r, color.g, color.b]);
+      this.input.colors[id] = color;
 
       const input = document.createElement('input');
       input.type = 'color';
@@ -68,10 +67,13 @@ class Renderer {
         color.l = (color.r + color.g + color.b) / 3;
         color.array.set([color.r, color.g, color.b]);
       });
-      button.insertBefore(input, button.firstChild);
-      color.l = (color.r + color.g + color.b) / 3;
-      color.array = new Uint8ClampedArray([color.r, color.g, color.b]);
-      this.input.colors[id] = color;
+
+      const button = document.createElement('button');
+      button.appendChild(input);
+      button.appendChild(document.createTextNode(name));
+      button.addEventListener('click', () => setType(id));
+      uiGroups[0].appendChild(button);
+
       return button;
     });
     const setBrush = (brush) => {
