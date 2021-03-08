@@ -1,11 +1,6 @@
 import Renderer from './renderer.js';
 
 // Setup
-const actions = {
-  // These map to mouse buttons
-  erase: 0x02,
-  paint: 0x00,
-};
 const types = {
   air: 0x00,
   clay: 0x01,
@@ -40,18 +35,40 @@ const renderer = new Renderer({
     { id: types.air, name: 'AIR', color: { r: 0, g: 0, b: 0 } },
   ],
 });
-
-const cells = new Uint8ClampedArray(renderer.width * renderer.height);
+const {
+  debug,
+  input,
+  pixels,
+  width,
+  height,
+} = renderer;
+const cells = new Uint8ClampedArray(width * height);
+for (let i = 0, l = pixels.data.length; i < l; i += 4) {
+  if (pixels.data[i] || pixels.data[i + 1] || pixels.data[i + 2]) {
+    cells[i / 4] = types.clay;
+  }
+}
 const water = {
-  state: new Float32Array(renderer.width * renderer.height),
-  step: new Float32Array(renderer.width * renderer.height),
+  state: new Float32Array(width * height),
+  step: new Float32Array(width * height),
 };
-const neighbors = [
-  { x: 0, y: -1 },
-  { x: -1, y: 0 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-];
+renderer.onClear = () => {
+  cells.fill(0);
+  water.state.fill(0);
+  water.step.fill(0);
+};
+
+const cellIndex = (x, y) => {
+  if (x < 0 || x >= width || y < 0 || y >= height) {
+    // Out of bounds
+    return -1;
+  }
+  return (height - 1 - y) * width + x;
+};
+const testCell = (x, y) => {
+  const index = cellIndex(x, y);
+  return (index === -1 || cells[index] === types.air) ? index : false;
+};
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
@@ -67,33 +84,17 @@ const getStableState = (totalMass) => {
   return (totalMass + maxCompress) / 2;
 };
 
-const cellIndex = (x, y) => {
-  const { width, height } = renderer;
-  if (x < 0 || x >= width || y < 0 || y >= height) {
-    // Out of bounds
-    return -1;
-  }
-  return (height - 1 - y) * width + x;
+const actions = {
+  // These map to mouse buttons
+  erase: 0x02,
+  paint: 0x00,
 };
-const testCell = (x, y) => {
-  const index = cellIndex(x, y);
-  return (index === -1 || cells[index] === types.air) ? index : false;
-};
-
-renderer.onClear = () => {
-  cells.fill(0);
-  water.state.fill(0);
-  water.step.fill(0);
-};
-for (let i = 0, l = renderer.pixels.data.length; i < l; i += 4) {
-  if (
-    renderer.pixels.data[i] !== 0
-    || renderer.pixels.data[i + 1] !== 0
-    || renderer.pixels.data[i + 2] !== 0
-  ) {
-    cells[i / 4] = types.clay;
-  }
-}
+const neighbors = [
+  { x: 0, y: -1 },
+  { x: -1, y: 0 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+];
 
 // Main loop
 let lastFrameTime = performance.now();
@@ -105,7 +106,6 @@ const animate = () => {
   lastFrameTime = frameTime;
 
   const steps = Math.floor(200 * delta) * 2;
-  const { input, pixels, width, height } = renderer;
   for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action !== false) {
@@ -244,6 +244,6 @@ const animate = () => {
 
   // Render
   renderer.render();
-  renderer.debug.innerText = `${Math.floor(performance.now() - frameTime)}ms`;
+  debug.innerText = `${Math.floor(performance.now() - frameTime)}ms`;
 };
 requestAnimationFrame(animate);
