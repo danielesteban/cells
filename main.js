@@ -46,7 +46,6 @@ const water = {
   state: new Float32Array(renderer.width * renderer.height),
   step: new Float32Array(renderer.width * renderer.height),
 };
-const pixel = new Uint8ClampedArray(3);
 const neighbors = [
   { x: 0, y: -1 },
   { x: -1, y: 0 },
@@ -176,9 +175,7 @@ const animate = () => {
             cells[target] = types.sand;
             water.state[index] = water.step[index] = Math.min(water.state[target], maxMass);
             water.state[target] = water.step[target] = 0;
-            pixel.set(pixels.data.subarray(target * 4, (target * 4) + 3));
             pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
-            pixels.data.set(pixel, index * 4);
           }
         }
       }
@@ -226,9 +223,8 @@ const animate = () => {
   }
 
   // Update air/water pixels
-  const airColor = input.colors[types.air];
+  const airColor = input.colors[types.air].array;
   const waterColor = input.colors[types.water];
-  pixel.set([airColor.r, airColor.g, airColor.b]);
   for (let i = 0; i < (width * height); i += 1) {
     if (cells[i] !== types.air) {
       continue;
@@ -242,7 +238,7 @@ const animate = () => {
         waterColor.b * l,
       ], i * 4);
     } else {
-      pixels.data.set(pixel, i * 4);
+      pixels.data.set(airColor, i * 4);
     }
   }
 
