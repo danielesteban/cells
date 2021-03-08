@@ -21,21 +21,43 @@ html, body, #wrapper {
   justify-content: center;
 }
 
+#renderer {
+  text-align: center;
+}
+
 #renderer > canvas {
   vertical-align: middle;
   background: #000;
 }
 
 #ui {
-  box-sizing: border-box;
   display: flex;
   background: #111;
-  height: 30px;
+}
+
+#ui.mobile {
+  flex-direction: column;
+  align-items: center;
+}
+
+#ui > div {
+  display: flex;
+  height: 25px;
+}
+
+#ui > div:last-child {
+  margin-left: auto;
+}
+
+#ui.mobile > div:last-child {
+  margin-left: 0;
 }
 
 #ui button {
   box-sizing: border-box;
-  background: #222;
+  display: flex;
+  align-items: center;
+  background: #000;
   color: #888;
   margin: 0;
   padding: 0 0.75rem;
@@ -46,7 +68,6 @@ html, body, #wrapper {
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  height: 100%;
 }
 
 #ui button.active {
@@ -54,11 +75,42 @@ html, body, #wrapper {
   color: #222;
 }
 
-#ui > div {
+#ui button > input[type="color"] {
+  display: block;
+  box-sizing: border-box;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  margin: 0;
+  padding: 0;
+  margin-right: 0.5rem;
+  width: 25px;
+  font-family: inherit;
+}
+
+#ui > div > div {
   display: flex;
-  margin-left: auto;
-  margin-right: 0.75rem;
+  margin-left: 1rem;
   align-items: center;
+}
+
+#ui.mobile > div > div {
+  margin: 0 0.5rem;
+}
+
+#ui > div > div > label {
+  margin-right: 0.25rem;
+}
+
+#ui > div > div > input[type="range"] {
+  max-width: 100px;
+  outline: 0;
+  margin: 0;
+  padding: 0;
+}
+
+#ui #debug {
+  margin: 0 0.5rem;
   justify-content: flex-end;
   width: 30px;
 }
