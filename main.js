@@ -38,13 +38,13 @@ const renderer = new Renderer({
 const {
   debug,
   input,
-  pixels,
+  pixels: { data: pixels },
   width,
   height,
 } = renderer;
 const cells = new Uint8ClampedArray(width * height);
-for (let i = 0, l = pixels.data.length; i < l; i += 4) {
-  if (pixels.data[i] || pixels.data[i + 1] || pixels.data[i + 2]) {
+for (let i = 0, l = pixels.length; i < l; i += 4) {
+  if (pixels[i] || pixels[i + 1] || pixels[i + 2]) {
     cells[i / 4] = types.clay;
   }
 }
@@ -109,13 +109,13 @@ const animate = () => {
   for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action !== false) {
-      input.brushOffsets.forEach(({ x, y }) => {
+      input.brushOffsets.forEach((offset) => {
         if (Math.random() >= 0.5) {
           return;
         }
         const index = cellIndex(
-          Math.min(Math.max(input.x + x, 0), width - 1),
-          Math.min(Math.max(input.y + y, 0), height - 1)
+          Math.min(Math.max(input.x + offset.x, 0), width - 1),
+          Math.min(Math.max(input.y + offset.y, 0), height - 1)
         );
         if (input.type === types.air || input.action === actions.erase) {
           cells[index] = types.air;
@@ -129,7 +129,7 @@ const animate = () => {
               const color = input.colors[input.type];
               cells[index] = input.type;
               water.state[index] = water.step[index] = 0;
-              pixels.data.set([
+              pixels.set([
                 color.r + (Math.random() - 0.5) * input.noise * 2 * color.l,
                 color.g + (Math.random() - 0.5) * input.noise * 2 * color.l,
                 color.b + (Math.random() - 0.5) * input.noise * 2 * color.l,
@@ -175,7 +175,7 @@ const animate = () => {
             cells[target] = types.sand;
             water.state[index] = water.step[index] = Math.min(water.state[target], maxMass);
             water.state[target] = water.step[target] = 0;
-            pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
+            pixels.copyWithin(target * 4, index * 4, (index * 4) + 3);
           }
         }
       }
@@ -232,13 +232,13 @@ const animate = () => {
     const mass = water.state[i];
     if (mass >= 0.001) {
       const l = (2 - Math.min(Math.max(mass, 1), 1.25));
-      pixels.data.set([
+      pixels.set([
         waterColor.r * l,
         waterColor.g * l,
         waterColor.b * l,
       ], i * 4);
     } else {
-      pixels.data.set(airColor, i * 4);
+      pixels.set(airColor, i * 4);
     }
   }
 
