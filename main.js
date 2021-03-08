@@ -1,16 +1,19 @@
 import Renderer from './renderer.js';
 
 // Setup
+const actions = {
+  // These map to mouse buttons
+  erase: 0x02,
+  paint: 0x00,
+};
+const types = {
+  air: 0x00,
+  clay: 0x01,
+  sand: 0x02,
+  water: 0x03,
+};
 const renderer = new Renderer({
-  ...(navigator.userAgent.includes('Mobile') ? {
-    width: 140,
-    height: 260,
-  } : {
-    width: 320,
-    height: 240,
-  }),
   dom: document.getElementById('renderer'),
-  inputTypes: ['CLAY', 'SAND', 'WATER'],
   pixels: ({ ctx, width, height }) => {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#339';
@@ -24,51 +27,32 @@ const renderer = new Renderer({
     [
       'Left click: Paint',
       'Right click: Erase',
-      '1-3: Select cell type',
+      '1-4: Select cell type',
       'Esc: Clear canvas',
     ].forEach((text, i) => {
       ctx.fillText(text, width * 0.5, height * (0.6 + i * 0.075));
     });
   },
+  types: [
+    { id: types.clay, name: 'CLAY', color: { r: 0x66, g: 0x66, b: 0x33 } },
+    { id: types.sand, name: 'SAND', color: { r: 0x66, g: 0x66, b: 0x00 } },
+    { id: types.water, name: 'WATER', color: { r: 0x22, g: 0x44, b: 0x88 } },
+    { id: types.air, name: 'AIR', color: { r: 0, g: 0, b: 0 } },
+  ],
 });
 
-const actions = {
-  // These map to mouse buttons
-  erase: 0x02,
-  paint: 0x00,
+const cells = new Uint8ClampedArray(renderer.width * renderer.height);
+const water = {
+  state: new Float32Array(renderer.width * renderer.height),
+  step: new Float32Array(renderer.width * renderer.height),
 };
+const pixel = new Uint8ClampedArray(3);
 const neighbors = [
   { x: 0, y: -1 },
   { x: -1, y: 0 },
   { x: 1, y: 0 },
   { x: 0, y: 1 },
 ];
-const types = {
-  air: 0x00,
-  clay: 0x01,
-  sand: 0x02,
-  water: 0x03,
-};
-const air = new Uint8ClampedArray(3);
-const pixel = new Uint8ClampedArray(3);
-const cells = new Uint8ClampedArray(renderer.width * renderer.height);
-const water = {
-  state: new Float32Array(renderer.width * renderer.height),
-  step: new Float32Array(renderer.width * renderer.height),
-};
-
-const cellIndex = (x, y) => {
-  const { width, height } = renderer;
-  if (x < 0 || x >= width || y < 0 || y >= height) {
-    // Out of bounds
-    return -1;
-  }
-  return (height - 1 - y) * width + x;
-};
-const test = (x, y) => {
-  const index = cellIndex(x, y);
-  return (index === -1 || cells[index] === types.air) ? index : false;
-};
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
@@ -82,6 +66,19 @@ const getStableState = (totalMass) => {
     return (maxMass ** 2 + totalMass * maxCompress) / (maxMass + maxCompress);
   }
   return (totalMass + maxCompress) / 2;
+};
+
+const cellIndex = (x, y) => {
+  const { width, height } = renderer;
+  if (x < 0 || x >= width || y < 0 || y >= height) {
+    // Out of bounds
+    return -1;
+  }
+  return (height - 1 - y) * width + x;
+};
+const testCell = (x, y) => {
+  const index = cellIndex(x, y);
+  return (index === -1 || cells[index] === types.air) ? index : false;
 };
 
 renderer.onClear = () => {
@@ -113,54 +110,40 @@ const animate = () => {
   for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action !== false) {
-      for (let j = 0; j < 4; j += 1) {
-        const index = cellIndex(
-          Math.min(Math.max(Math.floor(input.x + (Math.random() - 0.5) * 6), 0), width - 1),
-          Math.min(Math.max(Math.floor(input.y + (Math.random() - 0.5) * 6), 0), height - 1)
-        );
-        switch (input.action) {
-          case actions.erase:
-            cells[index] = types.air;
-            pixels.data.set(air, index * 4);
-            break;
-          case actions.paint:
-            switch (input.type) {
-              case types.clay:
-                cells[index] = input.type;
-                water.state[index] = water.step[index] = 0;
-                const l = 0x33 + (Math.random() * 0x33);
-                pixels.data.set([
-                  l + (Math.random() * 0x33),
-                  l + (Math.random() * 0x33),
-                  l - (Math.random() * 0x33),
-                ], index * 4);
-                break;
-              case types.sand:
-                cells[index] = input.type;
-                water.state[index] = water.step[index] = 0;
-                if (Math.random() > 0.3) {
-                  pixels.data.set([
-                    0x55 + (Math.random() * 0x55),
-                    0x55 + (Math.random() * 0x55),
-                    0,
-                  ], index * 4);
-                } else {
-                  pixels.data.set([
-                    0x55 + (Math.random() * 0x55),
-                    0x55 + (Math.random() * 0x55),
-                    0x55 + (Math.random() * 0x55),
-                  ], index * 4);
-                }
-                break;
-              case types.water:
-                cells[index] = types.air;
-                water.state[index] = water.step[index] = 0.5;
-                pixels.data.set(air, index * 4);
-                break;
-            }
-            break;
+      input.brushOffsets.forEach(({ x, y }) => {
+        if (Math.random() >= 0.5) {
+          return;
         }
-      }
+        const index = cellIndex(
+          Math.min(Math.max(input.x + x, 0), width - 1),
+          Math.min(Math.max(input.y + y, 0), height - 1)
+        );
+        if (input.type === types.air || input.action === actions.erase) {
+          cells[index] = types.air;
+          if (input.action === actions.paint) {
+            water.state[index] = water.step[index] = 0;
+          }
+        } else {
+          switch (input.type) {
+            case types.clay:
+            case types.sand: {
+              const color = input.colors[input.type];
+              cells[index] = input.type;
+              water.state[index] = water.step[index] = 0;
+              pixels.data.set([
+                color.r + (Math.random() - 0.5) * input.noise * 2 * color.l,
+                color.g + (Math.random() - 0.5) * input.noise * 2 * color.l,
+                color.b + (Math.random() - 0.5) * input.noise * 2 * color.l,
+              ], index * 4);
+              break;
+            }
+            case types.water:
+              cells[index] = types.air;
+              water.state[index] = water.step[index] = 0.5;
+              break;
+          }
+        }
+      });
     }
 
     // Simulate sand
@@ -175,11 +158,11 @@ const animate = () => {
             continue;
           }
           const target = (
-            test(x, y - 1)
-            || test(x - nx, y - 1)
-            || test(x + nx, y - 1)
-            || test(x + nx * 2, y - 1)
-            || test(x - nx * 2, y - 1)
+            testCell(x, y - 1)
+            || testCell(x - nx, y - 1)
+            || testCell(x + nx, y - 1)
+            || testCell(x + nx * 2, y - 1)
+            || testCell(x - nx * 2, y - 1)
           );
           if (target === false) {
             continue;
@@ -187,7 +170,6 @@ const animate = () => {
           if (target === -1) {
             // Destroy cell
             cells[index] = types.air;
-            pixels.data.set(air, index * 4);
           } else {
             // Swap cell with target position
             cells[index] = cells[target];
@@ -244,19 +226,23 @@ const animate = () => {
   }
 
   // Update air/water pixels
+  const airColor = input.colors[types.air];
+  const waterColor = input.colors[types.water];
+  pixel.set([airColor.r, airColor.g, airColor.b]);
   for (let i = 0; i < (width * height); i += 1) {
     if (cells[i] !== types.air) {
       continue;
     }
     const mass = water.state[i];
     if (mass >= 0.001) {
+      const l = (2 - Math.min(Math.max(mass, 1), 1.25));
       pixels.data.set([
-        0x22,
-        0x44 * (2 - Math.min(Math.max(mass, 1), 1.25)),
-        0x88 * (2 - Math.min(Math.max(mass, 1), 1.25)),
+        waterColor.r * l,
+        waterColor.g * l,
+        waterColor.b * l,
       ], i * 4);
     } else {
-      pixels.data.set(air, i * 4);
+      pixels.data.set(pixel, i * 4);
     }
   }
 
