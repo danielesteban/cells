@@ -174,7 +174,7 @@ const animate = () => {
             // Swap cell with target position
             cells[index] = cells[target];
             cells[target] = types.sand;
-            water.state[index] = water.step[index] = water.state[target];
+            water.state[index] = water.step[index] = Math.min(water.state[target], maxMass);
             water.state[target] = water.step[target] = 0;
             pixel.set(pixels.data.subarray(target * 4, (target * 4) + 3));
             pixels.data.copyWithin(target * 4, index * 4, (index * 4) + 3);
