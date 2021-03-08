@@ -50,7 +50,7 @@ class Renderer {
       ui.appendChild(group);
       return group;
     });
-    const buttons = types.map(({ id, name, color }, i) => {
+    const buttons = types.map(({ id, name, color }) => {
       color.l = (color.r + color.g + color.b) / 3;
       color.array = new Uint8ClampedArray([color.r, color.g, color.b]);
       this.input.colors[id] = color;
