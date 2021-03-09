@@ -11,13 +11,15 @@ const renderer = new Renderer({
   dom: document.getElementById('renderer'),
   pixels: ({ ctx, width, height }) => {
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#339';
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = '#333';
+    ctx.fillStyle = '#eee';
     ctx.font = '700 18px monospace';
     ctx.fillText('CELLS', width * 0.5, height * 0.2);
-    ctx.fillStyle = '#aaa';
+    ctx.fillStyle = '#666';
     ctx.font = '700 13px monospace';
     ctx.fillText('dani@gatunes © 2021', width * 0.5, height * 0.3);
-    ctx.fillStyle = '#eee';
+    ctx.fillStyle = '#ccc';
     ctx.font = '700 10px monospace';
     [
       'Left click: Paint',
