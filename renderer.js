@@ -214,7 +214,7 @@ class Renderer {
 
   clear() {
     const { onClear, pixels } = this;
-    const pixel = new Uint8ClampedArray([0, 0, 0]);
+    const pixel = new Uint8ClampedArray(3);
     for (let i = 0, l = pixels.data.length; i < l; i += 4) {
       pixels.data.set(pixel, i);
     }
