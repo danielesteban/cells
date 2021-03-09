@@ -100,7 +100,7 @@ html, body, #wrapper {
 }
 
 #ui > div > div > label {
-  margin-right: 0.25rem;
+  margin-right: 0.5rem;
 }
 
 #ui > div > div > input[type="range"] {
