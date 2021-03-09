@@ -84,6 +84,13 @@ const getStableState = (totalMass) => {
   return (totalMass + maxCompress) / 2;
 };
 
+const airGradient = new Uint8ClampedArray(width * height);
+for (let y = 0, i = 0; y < height; y += 1) {
+  const l = (height - y) / height;
+  for (let x = 0; x < width; x += 1, i += 1) {
+    airGradient[i] = Math.floor(0xFF * (l + ((Math.random() - 0.5) * 0.02)));
+  }
+}
 const actions = {
   // These map to mouse buttons
   erase: 0x02,
@@ -130,9 +137,9 @@ const animate = () => {
               cells[index] = input.type;
               water.state[index] = water.step[index] = 0;
               pixels.set([
-                color.r + (Math.random() - 0.5) * input.noise * 2 * color.l,
-                color.g + (Math.random() - 0.5) * input.noise * 2 * color.l,
-                color.b + (Math.random() - 0.5) * input.noise * 2 * color.l,
+                Math.floor(color.r + (Math.random() - 0.5) * input.noise * 2 * color.l),
+                Math.floor(color.g + (Math.random() - 0.5) * input.noise * 2 * color.l),
+                Math.floor(color.b + (Math.random() - 0.5) * input.noise * 2 * color.l),
               ], index * 4);
               break;
             }
@@ -225,27 +232,25 @@ const animate = () => {
   // Update air/water pixels
   const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
-  const air = new Uint8ClampedArray(3);
-  for (let y = 0, i = 0; y < height; y += 1) {
-    {
-      const l = (height - y) / height;
-      air.set([airColor.r * l, airColor.g * l, airColor.b * l]);
+  for (let i = 0; i < (width * height); i += 1) {
+    if (cells[i] !== types.air) {
+      continue;
     }
-    for (let x = 0; x < width; x += 1, i += 1) {
-      if (cells[i] !== types.air) {
-        continue;
-      }
-      const mass = water.state[i];
-      if (mass >= 0.001) {
-        const l = (2 - Math.min(Math.max(mass, 1), 1.25));
-        pixels.set([
-          waterColor.r * l,
-          waterColor.g * l,
-          waterColor.b * l,
-        ], i * 4);
-      } else {
-        pixels.set(air, i * 4);
-      }
+    const mass = water.state[i];
+    if (mass >= 0.001) {
+      const l = (2 - Math.min(Math.max(mass, 1), 1.25));
+      pixels.set([
+        Math.floor(waterColor.r * l),
+        Math.floor(waterColor.g * l),
+        Math.floor(waterColor.b * l),
+      ], i * 4);
+    } else {
+      const n = airGradient[i] / 0xFF;
+      pixels.set([
+        Math.floor(airColor.r * n),
+        Math.floor(airColor.g * n),
+        Math.floor(airColor.b * n),
+      ], i * 4);
     }
   }
 
