@@ -8,7 +8,6 @@ const types = {
   water: 0x03,
 };
 const renderer = new Renderer({
-  dom: document.getElementById('renderer'),
   pixels: ({ ctx, width, height, isMobile }) => {
     ctx.shadowBlur = 2;
     ctx.shadowColor = '#333';
