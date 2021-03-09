@@ -52,7 +52,6 @@ class Renderer {
     });
     const buttons = types.map(({ id, name, color }) => {
       color.l = (color.r + color.g + color.b) / 3;
-      color.array = new Uint8ClampedArray([color.r, color.g, color.b]);
       this.input.colors[id] = color;
 
       const input = document.createElement('input');
@@ -65,7 +64,6 @@ class Renderer {
         color.g = parseInt(input.value.substr(3, 2), 16);
         color.b = parseInt(input.value.substr(5, 2), 16);
         color.l = (color.r + color.g + color.b) / 3;
-        color.array.set([color.r, color.g, color.b]);
       });
 
       const button = document.createElement('button');

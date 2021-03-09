@@ -223,22 +223,29 @@ const animate = () => {
   }
 
   // Update air/water pixels
-  const airColor = input.colors[types.air].array;
+  const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
-  for (let i = 0; i < (width * height); i += 1) {
-    if (cells[i] !== types.air) {
-      continue;
+  const air = new Uint8ClampedArray(3);
+  for (let y = 0, i = 0; y < height; y += 1) {
+    {
+      const l = (height - y) / height;
+      air.set([airColor.r * l, airColor.g * l, airColor.b * l]);
     }
-    const mass = water.state[i];
-    if (mass >= 0.001) {
-      const l = (2 - Math.min(Math.max(mass, 1), 1.25));
-      pixels.set([
-        waterColor.r * l,
-        waterColor.g * l,
-        waterColor.b * l,
-      ], i * 4);
-    } else {
-      pixels.set(airColor, i * 4);
+    for (let x = 0; x < width; x += 1, i += 1) {
+      if (cells[i] !== types.air) {
+        continue;
+      }
+      const mass = water.state[i];
+      if (mass >= 0.001) {
+        const l = (2 - Math.min(Math.max(mass, 1), 1.25));
+        pixels.set([
+          waterColor.r * l,
+          waterColor.g * l,
+          waterColor.b * l,
+        ], i * 4);
+      } else {
+        pixels.set(air, i * 4);
+      }
     }
   }
 
