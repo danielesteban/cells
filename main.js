@@ -9,10 +9,10 @@ const types = {
 };
 const renderer = new Renderer({
   dom: document.getElementById('renderer'),
-  pixels: ({ ctx, width, height }) => {
-    ctx.textAlign = 'center';
+  pixels: ({ ctx, width, height, isMobile }) => {
     ctx.shadowBlur = 2;
     ctx.shadowColor = '#333';
+    ctx.textAlign = 'center';
     ctx.fillStyle = '#eee';
     ctx.font = '700 18px monospace';
     ctx.fillText('CELLS', width * 0.5, height * 0.2);
@@ -21,6 +21,10 @@ const renderer = new Renderer({
     ctx.fillText('dani@gatunes © 2021', width * 0.5, height * 0.3);
     ctx.fillStyle = '#ccc';
     ctx.font = '700 10px monospace';
+    if (isMobile) {
+      ctx.fillText('Tap to Paint', width * 0.5, height * 0.7);
+      return;
+    }
     [
       'Left click: Paint',
       'Right click: Erase',

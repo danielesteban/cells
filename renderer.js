@@ -30,7 +30,7 @@ class Renderer {
       ctx.save();
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, width, height);
-      pixels({ ctx, width, height });
+      pixels({ ctx, width, height, isMobile });
       ctx.restore();
       this.pixels = ctx.getImageData(0, 0, width, height);
       this.rasterizerContext = ctx;
