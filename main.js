@@ -138,7 +138,7 @@ const animate = () => {
         if (index === -1) {
           return;
         }
-        if (input.type === types.air || input.action === actions.erase) {
+        if (input.action === actions.erase || input.type === types.air) {
           cells[index] = types.air;
           water.state[index] = water.step[index] = 0;
           return;
