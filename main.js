@@ -253,10 +253,10 @@ const animate = () => {
       if (cells[index] !== types.air) {
         continue;
       }
-      const gradient = airGradient[index];
-      pixel[0] = Math.floor(airColor.r * gradient / 0xFF);
-      pixel[1] = Math.floor(airColor.g * gradient / 0xFF);
-      pixel[2] = Math.floor(airColor.b * gradient / 0xFF);
+      const gradient = airGradient[index] / 0xFF;
+      pixel[0] = Math.floor(airColor.r * gradient);
+      pixel[1] = Math.floor(airColor.g * gradient);
+      pixel[2] = Math.floor(airColor.b * gradient);
       const mass = water.state[index];
       if (mass >= minMass) {
         const light = (2 - Math.min(Math.max(mass, 1), 1.25)) * (
