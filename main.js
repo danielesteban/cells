@@ -113,7 +113,7 @@ const animate = () => {
   const delta = Math.min((frameTime - lastFrameTime) / 1000, 1 / 30);
   lastFrameTime = frameTime;
 
-  const steps = Math.floor(200 * delta) * 2;
+  const steps = Math.floor(270 * delta) * 2;
   for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action !== false) {
