@@ -131,37 +131,35 @@ const animate = () => {
     // Process Input
     if (input.action !== false) {
       input.brushOffsets.forEach((offset) => {
-        if (Math.random() >= 0.5) {
+        if (Math.random() > 0.5) {
           return;
         }
-        const index = cellIndex(
-          Math.min(Math.max(input.x + offset.x, 0), width - 1),
-          Math.min(Math.max(input.y + offset.y, 0), height - 1)
-        );
+        const index = cellIndex(input.x + offset.x, input.y + offset.y);
+        if (index === -1) {
+          return;
+        }
         if (input.type === types.air || input.action === actions.erase) {
           cells[index] = types.air;
-          if (input.action === actions.paint) {
+          water.state[index] = water.step[index] = 0;
+          return;
+        }
+        switch (input.type) {
+          case types.clay:
+          case types.sand: {
+            const color = input.colors[input.type];
+            cells[index] = input.type;
             water.state[index] = water.step[index] = 0;
+            pixels.set([
+              Math.floor(color.r + (Math.random() - 0.5) * input.noise * 2 * color.l),
+              Math.floor(color.g + (Math.random() - 0.5) * input.noise * 2 * color.l),
+              Math.floor(color.b + (Math.random() - 0.5) * input.noise * 2 * color.l),
+            ], index * 4);
+            break;
           }
-        } else {
-          switch (input.type) {
-            case types.clay:
-            case types.sand: {
-              const color = input.colors[input.type];
-              cells[index] = input.type;
-              water.state[index] = water.step[index] = 0;
-              pixels.set([
-                Math.floor(color.r + (Math.random() - 0.5) * input.noise * 2 * color.l),
-                Math.floor(color.g + (Math.random() - 0.5) * input.noise * 2 * color.l),
-                Math.floor(color.b + (Math.random() - 0.5) * input.noise * 2 * color.l),
-              ], index * 4);
-              break;
-            }
-            case types.water:
-              cells[index] = types.air;
-              water.state[index] = water.step[index] = 0.5;
-              break;
-          }
+          case types.water:
+            cells[index] = types.air;
+            water.state[index] = water.step[index] = 0.5;
+            break;
         }
       });
     }
