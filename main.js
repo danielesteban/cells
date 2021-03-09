@@ -102,6 +102,7 @@ const neighbors = [
   { x: 1, y: 0 },
   { x: 0, y: 1 },
 ];
+const pixel = new Uint8ClampedArray(3);
 
 // Main loop
 let lastFrameTime = performance.now();
@@ -236,22 +237,18 @@ const animate = () => {
     if (cells[i] !== types.air) {
       continue;
     }
+    const gradient = airGradient[i];
+    pixel[0] = Math.floor(airColor.r * gradient / 0xFF);
+    pixel[1] = Math.floor(airColor.g * gradient / 0xFF);
+    pixel[2] = Math.floor(airColor.b * gradient / 0xFF);
     const mass = water.state[i];
     if (mass >= 0.001) {
-      const l = (2 - Math.min(Math.max(mass, 1), 1.25));
-      pixels.set([
-        Math.floor(waterColor.r * l),
-        Math.floor(waterColor.g * l),
-        Math.floor(waterColor.b * l),
-      ], i * 4);
-    } else {
-      const n = airGradient[i] / 0xFF;
-      pixels.set([
-        Math.floor(airColor.r * n),
-        Math.floor(airColor.g * n),
-        Math.floor(airColor.b * n),
-      ], i * 4);
+      const l = 2 - Math.min(Math.max(mass, 1), 1.25);
+      pixel[0] = Math.floor((pixel[0] + waterColor.r * l) / 2);
+      pixel[1] = Math.floor((pixel[1] + waterColor.g * l) / 2);
+      pixel[2] = Math.floor((pixel[2] + waterColor.b * l) / 2);
     }
+    pixels.set(pixel, i * 4);
   }
 
   // Render
