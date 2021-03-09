@@ -244,9 +244,9 @@ const animate = () => {
     const mass = water.state[i];
     if (mass >= 0.001) {
       const l = 2 - Math.min(Math.max(mass, 1), 1.25);
-      pixel[0] = Math.floor((pixel[0] + waterColor.r * l) / 2);
-      pixel[1] = Math.floor((pixel[1] + waterColor.g * l) / 2);
-      pixel[2] = Math.floor((pixel[2] + waterColor.b * l) / 2);
+      pixel[0] = Math.floor(pixel[0] / 2 + waterColor.r * l);
+      pixel[1] = Math.floor(pixel[1] / 2 + waterColor.g * l);
+      pixel[2] = Math.floor(pixel[2] / 2 + waterColor.b * l);
     }
     pixels.set(pixel, i * 4);
   }
