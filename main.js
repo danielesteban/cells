@@ -106,10 +106,10 @@ const neighbors = [
 const pixel = new Uint8ClampedArray(3);
 const waterOutline = (x, y) => {
   const index = cellIndex(x, y);
-  if (index === -1) return false;
+  if (index === -1) return 0;
   if (cells[index] !== types.air) return 0.75; 
   if (water.state[index] < minMass) return 1.25; 
-  return false;
+  return 0;
 };
 
 // Main loop
@@ -254,8 +254,7 @@ const animate = () => {
       const mass = water.state[index];
       if (mass >= minMass) {
         const light = (2 - Math.min(Math.max(mass, 1), 1.25)) * (
-          waterOutline(x - 1, y)
-          || waterOutline(x + 1, y)
+          Math.max(waterOutline(x - 1, y), waterOutline(x + 1, y))
           || waterOutline(x, y - 1)
           || waterOutline(x, y + 1)
           || 1
