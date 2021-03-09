@@ -86,7 +86,7 @@ const getStableState = (totalMass) => {
 
 const airGradient = new Uint8ClampedArray(width * height);
 for (let y = 0, i = 0; y < height; y += 1) {
-  const l = 0.25 + ((height - 1 - y) / (height - 1)) * 0.75;
+  const l = 0.25 + (((height - 1 - y) / (height - 1)) ** 2) * 0.75;
   for (let x = 0; x < width; x += 1, i += 1) {
     airGradient[i] = Math.floor(0xFF * (l + ((Math.random() - 0.5) * 0.02)));
   }
