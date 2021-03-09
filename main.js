@@ -104,7 +104,7 @@ const neighbors = [
   { x: 0, y: 1 },
 ];
 const pixel = new Uint8ClampedArray(3);
-const testOutline = (x, y) => {
+const waterOutline = (x, y) => {
   const index = cellIndex(x, y);
   if (index === -1) return false;
   if (cells[index] !== types.air) return 0.75; 
@@ -241,32 +241,30 @@ const animate = () => {
   // Update air/water pixels
   const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
-  for (let y = (height - 1), i = 0; y >= 0; y -= 1) {
-    for (let x = 0; x < width; x += 1, i += 1) {
-      if (cells[i] !== types.air) {
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = cellIndex(x, y);
+      if (cells[index] !== types.air) {
         continue;
       }
-      const gradient = airGradient[i];
+      const gradient = airGradient[index];
       pixel[0] = Math.floor(airColor.r * gradient / 0xFF);
       pixel[1] = Math.floor(airColor.g * gradient / 0xFF);
       pixel[2] = Math.floor(airColor.b * gradient / 0xFF);
-      const mass = water.state[i];
+      const mass = water.state[index];
       if (mass >= minMass) {
-        const outline = (
-          testOutline(x - 1, y)
-          || testOutline(x + 1, y)
-          || testOutline(x, y - 1)
-          || testOutline(x, y + 1)
-        );
-        const light = (
-          (2 - Math.min(Math.max(mass, 1), 1.25))
-          * (outline !== false ? outline : 1)
+        const light = (2 - Math.min(Math.max(mass, 1), 1.25)) * (
+          waterOutline(x - 1, y)
+          || waterOutline(x + 1, y)
+          || waterOutline(x, y - 1)
+          || waterOutline(x, y + 1)
+          || 1
         );
         pixel[0] = Math.floor(pixel[0] / 2 + waterColor.r * light);
         pixel[1] = Math.floor(pixel[1] / 2 + waterColor.g * light);
         pixel[2] = Math.floor(pixel[2] / 2 + waterColor.b * light);
       }
-      pixels.set(pixel, i * 4);
+      pixels.set(pixel, index * 4);
     }
   }
 
