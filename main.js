@@ -32,7 +32,7 @@ const renderer = new Renderer({
     { id: types.clay, name: 'CLAY', color: { r: 0x66, g: 0x66, b: 0x33 } },
     { id: types.sand, name: 'SAND', color: { r: 0x66, g: 0x66, b: 0x00 } },
     { id: types.water, name: 'WATER', color: { r: 0x22, g: 0x44, b: 0x88 } },
-    { id: types.air, name: 'AIR', color: { r: 0, g: 0, b: 0 } },
+    { id: types.air, name: 'AIR', color: { r: 0x11, g: 0x22, b: 0x33 } },
   ],
 });
 const {
@@ -72,6 +72,7 @@ const testCell = (x, y) => {
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
 const maxCompress = 0.02; // How much excess water a cell can store, compared to the cell above it
+const minMass = 0.001;
 const getStableState = (totalMass) => {
   // This function is used to compute how water should be split among two vertically adjacent cells.
   // It returns the amount of water that should be in the bottom cell.
@@ -103,6 +104,13 @@ const neighbors = [
   { x: 0, y: 1 },
 ];
 const pixel = new Uint8ClampedArray(3);
+const testOutline = (x, y) => {
+  const index = cellIndex(x, y);
+  if (index === -1) return false;
+  if (cells[index] !== types.air) return 0.75; 
+  if (water.state[index] < minMass) return 1.25; 
+  return false;
+};
 
 // Main loop
 let lastFrameTime = performance.now();
@@ -233,22 +241,33 @@ const animate = () => {
   // Update air/water pixels
   const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
-  for (let i = 0; i < (width * height); i += 1) {
-    if (cells[i] !== types.air) {
-      continue;
+  for (let y = (height - 1), i = 0; y >= 0; y -= 1) {
+    for (let x = 0; x < width; x += 1, i += 1) {
+      if (cells[i] !== types.air) {
+        continue;
+      }
+      const gradient = airGradient[i];
+      pixel[0] = Math.floor(airColor.r * gradient / 0xFF);
+      pixel[1] = Math.floor(airColor.g * gradient / 0xFF);
+      pixel[2] = Math.floor(airColor.b * gradient / 0xFF);
+      const mass = water.state[i];
+      if (mass >= minMass) {
+        const outline = (
+          testOutline(x - 1, y)
+          || testOutline(x + 1, y)
+          || testOutline(x, y - 1)
+          || testOutline(x, y + 1)
+        );
+        const light = (
+          (2 - Math.min(Math.max(mass, 1), 1.25))
+          * (outline !== false ? outline : 1)
+        );
+        pixel[0] = Math.floor(pixel[0] / 2 + waterColor.r * light);
+        pixel[1] = Math.floor(pixel[1] / 2 + waterColor.g * light);
+        pixel[2] = Math.floor(pixel[2] / 2 + waterColor.b * light);
+      }
+      pixels.set(pixel, i * 4);
     }
-    const gradient = airGradient[i];
-    pixel[0] = Math.floor(airColor.r * gradient / 0xFF);
-    pixel[1] = Math.floor(airColor.g * gradient / 0xFF);
-    pixel[2] = Math.floor(airColor.b * gradient / 0xFF);
-    const mass = water.state[i];
-    if (mass >= 0.001) {
-      const l = 2 - Math.min(Math.max(mass, 1), 1.25);
-      pixel[0] = Math.floor(pixel[0] / 2 + waterColor.r * l);
-      pixel[1] = Math.floor(pixel[1] / 2 + waterColor.g * l);
-      pixel[2] = Math.floor(pixel[2] / 2 + waterColor.b * l);
-    }
-    pixels.set(pixel, i * 4);
   }
 
   // Render
