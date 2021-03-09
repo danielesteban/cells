@@ -3,7 +3,8 @@
 // Exporting just a simple api to render an ImageData instance with a bunch of pixels
 
 class Renderer {
-  constructor({ dom, pixels, types }) {
+  constructor({ pixels, types }) {
+    const dom = document.getElementById('renderer');
     const isMobile = navigator.userAgent.includes('Mobile');
     const width = isMobile ? 160 : 320;
     const height = 240;
