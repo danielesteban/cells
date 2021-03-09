@@ -182,8 +182,6 @@ const animate = () => {
             testCell(x, y - 1)
             || testCell(x - nx, y - 1)
             || testCell(x + nx, y - 1)
-            || testCell(x + nx * 2, y - 1)
-            || testCell(x - nx * 2, y - 1)
           );
           if (target === false) {
             continue;
