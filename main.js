@@ -4,11 +4,12 @@ import Renderer from './renderer.js';
 const types = {
   air: 0x00,
   clay: 0x01,
-  sand: 0x02,
-  water: 0x03,
+  light: 0x02,
+  sand: 0x03,
+  water: 0x04,
 };
 const renderer = new Renderer({
-  pixels: ({ ctx, width, height, isMobile }) => {
+  image: ({ ctx, width, height, isMobile }) => {
     ctx.shadowBlur = 2;
     ctx.shadowColor = '#333';
     ctx.textAlign = 'center';
@@ -33,8 +34,29 @@ const renderer = new Renderer({
       ctx.fillText(text, width * 0.5, height * (0.6 + i * 0.075));
     });
   },
+  shader: `
+    float luminance = (
+      texture2D(light, uv + vec2(-pixel.x, -pixel.y)).x
+      + texture2D(light, uv + vec2(0, -pixel.y)).x
+      + texture2D(light, uv + vec2(pixel.x, -pixel.y)).x
+      + texture2D(light, uv + vec2(-pixel.x, 0)).x
+      + texture2D(light, uv).x
+      + texture2D(light, uv + vec2(pixel.x, 0)).x
+      + texture2D(light, uv + vec2(-pixel.x, pixel.y)).x
+      + texture2D(light, uv + vec2(0, pixel.y)).x
+      + texture2D(light, uv + vec2(pixel.x, pixel.y)).x
+    ) / 9.0;
+    gl_FragColor = vec4(
+      blendSoftLight(
+        texture2D(color, uv).xyz,
+        vec3(0.5 + (luminance * luminance) * 0.5)
+      ),
+      1.0
+    );
+  `,
   types: [
-    { id: types.clay, name: 'CLAY', color: { r: 0x66, g: 0x66, b: 0x33 } },
+    { id: types.clay, name: 'CLAY', color: { r: 0x44, g: 0x44, b: 0x33 } },
+    { id: types.light, name: 'LIGHT', color: { r: 0x99, g: 0x99, b: 0x88 } },
     { id: types.sand, name: 'SAND', color: { r: 0x66, g: 0x66, b: 0x00 } },
     { id: types.water, name: 'WATER', color: { r: 0x22, g: 0x44, b: 0x88 } },
     { id: types.air, name: 'AIR', color: { r: 0x11, g: 0x22, b: 0x33 } },
@@ -43,25 +65,45 @@ const renderer = new Renderer({
 const {
   debug,
   input,
-  pixels: { data: pixels },
+  color,
+  light,
   width,
   height,
 } = renderer;
+
 const cells = new Uint8ClampedArray(width * height);
-for (let i = 0, l = pixels.length; i < l; i += 4) {
-  if (pixels[i] || pixels[i + 1] || pixels[i + 2]) {
-    cells[i / 4] = types.clay;
+for (let i = 0, l = color.length; i < l; i += 3) {
+  if (color[i] || color[i + 1] || color[i + 2]) {
+    cells[i / 3] = types.clay;
   }
 }
 const water = {
   state: new Float32Array(width * height),
   step: new Float32Array(width * height),
 };
+
 renderer.onClear = () => {
   cells.fill(0);
   water.state.fill(0);
   water.step.fill(0);
 };
+
+const actions = {
+  // These map to mouse buttons
+  erase: 0x02,
+  paint: 0x00,
+};
+const neighbors = [
+  { x: 0, y: -1 },
+  { x: -1, y: 0 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+];
+const noise = new Uint8ClampedArray(width * height);
+noise.forEach((v, i) => {
+  noise[i] = Math.floor(0xFF * (0.8 + ((Math.random() - 0.5) * 0.02)));
+});
+const pixel = new Uint8ClampedArray(3);
 
 const cellIndex = (x, y) => {
   if (x < 0 || x >= width || y < 0 || y >= height) {
@@ -70,9 +112,37 @@ const cellIndex = (x, y) => {
   }
   return (height - 1 - y) * width + x;
 };
+
 const testCell = (x, y) => {
   const index = cellIndex(x, y);
   return (index === -1 || cells[index] === types.air) ? index : false;
+};
+
+const floodLight = (queue) => {
+  const next = [];
+  queue.forEach(({ x, y }) => {
+    const index = cellIndex(x, y);
+    const level = light[index];
+    neighbors.forEach((offset) => {
+      const nx = x + offset.x;
+      const ny = y + offset.y;
+      const nl = Math.max(level - 2, 0);
+      const neighbor = cellIndex(nx, ny);
+      if (
+        neighbor === -1
+        || cells[neighbor] === types.clay
+        || light[neighbor] >= nl
+      ) {
+        return;
+      }
+      light[neighbor] = nl;
+      next.push({ x: nx, y: ny });
+    });
+  });
+  queue.length = 0;
+  if (next.length) {
+    floodLight(next);
+  }
 };
 
 const maxMass = 1.0; // The un-pressurized mass of a full water cell
@@ -90,25 +160,6 @@ const getStableState = (totalMass) => {
   return (totalMass + maxCompress) / 2;
 };
 
-const airGradient = new Uint8ClampedArray(width * height);
-for (let y = 0, i = 0; y < height; y += 1) {
-  const l = 0.25 + (((height - 1 - y) / (height - 1)) ** 2) * 0.75;
-  for (let x = 0; x < width; x += 1, i += 1) {
-    airGradient[i] = Math.floor(0xFF * (l + ((Math.random() - 0.5) * 0.02)));
-  }
-}
-const actions = {
-  // These map to mouse buttons
-  erase: 0x02,
-  paint: 0x00,
-};
-const neighbors = [
-  { x: 0, y: -1 },
-  { x: -1, y: 0 },
-  { x: 1, y: 0 },
-  { x: 0, y: 1 },
-];
-const pixel = new Uint8ClampedArray(3);
 const waterOutline = (x, y) => {
   const index = cellIndex(x, y);
   if (index === -1) return 0;
@@ -145,15 +196,16 @@ const animate = () => {
         }
         switch (input.type) {
           case types.clay:
-          case types.sand: {
-            const color = input.colors[input.type];
+          case types.sand:
+          case types.light: {
             cells[index] = input.type;
             water.state[index] = water.step[index] = 0;
-            pixels.set([
-              Math.floor(color.r + (Math.random() - 0.5) * input.noise * 2 * color.l),
-              Math.floor(color.g + (Math.random() - 0.5) * input.noise * 2 * color.l),
-              Math.floor(color.b + (Math.random() - 0.5) * input.noise * 2 * color.l),
-            ], index * 4);
+            const { r, g, b, l } = input.colors[input.type];
+            color.set([
+              Math.floor(r + (Math.random() - 0.5) * input.noise * 2 * l),
+              Math.floor(g + (Math.random() - 0.5) * input.noise * 2 * l),
+              Math.floor(b + (Math.random() - 0.5) * input.noise * 2 * l),
+            ], index * 3);
             break;
           }
           case types.water:
@@ -192,7 +244,7 @@ const animate = () => {
             cells[target] = types.sand;
             water.state[index] = water.step[index] = Math.min(water.state[target], maxMass);
             water.state[target] = water.step[target] = 0;
-            pixels.copyWithin(target * 4, index * 4, (index * 4) + 3);
+            color.copyWithin(target * 3, index * 3, (index * 3) + 3);
           }
         }
       }
@@ -239,34 +291,50 @@ const animate = () => {
     water.state.set(water.step);
   }
 
-  // Update air/water pixels
+  light.fill(0);
+  const lightQueue = [];
+
   const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const index = cellIndex(x, y);
-      if (cells[index] !== types.air) {
-        continue;
+
+      // Queue lights for propagation
+      if (cells[index] === types.light) {
+        light[index] = 0xFF;
+        lightQueue.push({ x, y });
       }
-      const gradient = airGradient[index] / 0xFF;
-      pixel[0] = Math.floor(airColor.r * gradient);
-      pixel[1] = Math.floor(airColor.g * gradient);
-      pixel[2] = Math.floor(airColor.b * gradient);
-      const mass = water.state[index];
-      if (mass >= minMass) {
-        const light = (2 - Math.min(Math.max(mass, 1), 1.25)) * (
-          Math.max(waterOutline(x - 1, y), waterOutline(x + 1, y))
-          || waterOutline(x, y - 1)
-          || waterOutline(x, y + 1)
-          || 1
-        );
-        pixel[0] = Math.floor(pixel[0] / 2 + waterColor.r * light);
-        pixel[1] = Math.floor(pixel[1] / 2 + waterColor.g * light);
-        pixel[2] = Math.floor(pixel[2] / 2 + waterColor.b * light);
+  
+      // Update air/water pixels
+      if (cells[index] === types.air) {
+        // Incomplete: Move this to the GPU
+        // This loop should just flag the water cells.
+        // If the shader receives the cells as a texture and the water color as a uniform,
+        // the rest of this logic could be in the fragment shader.
+        const n = noise[index] / 0xFF;
+        pixel[0] = Math.floor(airColor.r * n);
+        pixel[1] = Math.floor(airColor.g * n);
+        pixel[2] = Math.floor(airColor.b * n);
+        const mass = water.state[index];
+        if (mass >= minMass) {
+          const light = (2 - Math.min(Math.max(mass, 1), 1.25)) * (
+            Math.max(waterOutline(x - 1, y), waterOutline(x + 1, y))
+            || waterOutline(x, y - 1)
+            || waterOutline(x, y + 1)
+            || 1
+          );
+          pixel[0] = Math.floor((pixel[0] + waterColor.r * light) / 2);
+          pixel[1] = Math.floor((pixel[1] + waterColor.g * light) / 2);
+          pixel[2] = Math.floor((pixel[2] + waterColor.b * light) / 2);
+        }
+        color.set(pixel, index * 3);
       }
-      pixels.set(pixel, index * 4);
     }
   }
+
+  // Propagate light
+  floodLight(lightQueue);
 
   // Render
   renderer.render();

@@ -1,9 +1,13 @@
 // The purpose of this class is to abstract out all the boilerplate from the main file
 // Setting up the UI and the rendering context and handling all the input
-// Exporting just a simple api to render an ImageData instance with a bunch of pixels
+// Exporting just a simple api to render a bunch of pixels
 
 class Renderer {
-  constructor({ pixels, types }) {
+  constructor({
+    image,
+    shader,
+    types,
+  }) {
     const dom = document.getElementById('renderer');
     const isMobile = navigator.userAgent.includes('Mobile');
     const width = isMobile ? 160 : 320;
@@ -13,7 +17,7 @@ class Renderer {
     this.height = height;
     this.input = {
       action: false,
-      brush: 0.5,
+      brush: 0.24,
       colors: [],
       noise: 0.5,
       touch: false,
@@ -21,24 +25,118 @@ class Renderer {
       y: 0,
     };
 
-    // Setup rasterizer & upscaler
-    this.rasterizer = document.createElement('canvas');
+    // Setup rendering context
+    this.canvas = document.createElement('canvas');
     {
-      const ctx = this.rasterizer.getContext('2d', { alpha: false });
-      this.rasterizer.width = width;
-      this.rasterizer.height = height;
-      ctx.imageSmoothingEnabled = false;
-      ctx.save();
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, width, height);
-      pixels({ ctx, width, height, isMobile });
-      ctx.restore();
-      this.pixels = ctx.getImageData(0, 0, width, height);
-      this.rasterizerContext = ctx;
+      const hints = {
+        alpha: false,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        preserveDrawingBuffer: false,
+      };
+      this.context = (
+        this.canvas.getContext('webgl', hints)
+        || this.canvas.getContext('experimental-webgl', hints)
+      );
+      const GL = this.context;
+
+      const vertexShader = `
+        precision mediump float;
+        attribute vec2 position;
+        varying vec2 uv;
+        void main(void) {
+          gl_Position = vec4(position, 0.0, 1.0);
+          uv = (position * vec2(0.5, -0.5) + vec2(0.5));
+        }
+      `;
+
+      const fragmentShader = `
+        precision mediump float;
+        varying vec2 uv;
+        uniform sampler2D color;
+        uniform sampler2D light;
+        uniform vec2 pixel;
+        vec3 blendSoftLight(vec3 base, vec3 blend) {
+          return mix(
+            sqrt(base) * (2.0 * blend - 1.0) + 2.0 * base * (1.0 - blend), 
+            2.0 * base * blend + base * base * (1.0 - 2.0 * blend), 
+            step(base, vec3(0.5))
+          );
+        }
+        void main(void) {
+          ${shader}
+        }
+      `;
+
+      const vertex = GL.createShader(GL.VERTEX_SHADER);
+      GL.shaderSource(vertex, vertexShader);
+      GL.compileShader(vertex);
+      const fragment = GL.createShader(GL.FRAGMENT_SHADER);
+      GL.shaderSource(fragment, fragmentShader);
+      GL.compileShader(fragment);
+      const program = GL.createProgram();
+      GL.attachShader(program, vertex);
+      GL.attachShader(program, fragment);
+      GL.linkProgram(program);
+      GL.useProgram(program);
+      this.program = program;
+
+      const buffer = GL.createBuffer();
+      GL.bindBuffer(GL.ARRAY_BUFFER, buffer);
+      GL.bufferData(GL.ARRAY_BUFFER, new Float32Array([
+        -1, -1,    1, 1,    -1, 1, 
+        1, -1,    1, 1,    -1, -1, 
+      ]), GL.STATIC_DRAW);
+      const attribute = GL.getAttribLocation(program, 'position')
+      GL.vertexAttribPointer(attribute, 2, GL.FLOAT, 0, 0, 0);
+      GL.enableVertexAttribArray(attribute);
+
+      GL.uniform1i(GL.getUniformLocation(program, 'color'), 0);
+      GL.uniform1i(GL.getUniformLocation(program, 'light'), 1);
+      GL.uniform2fv(GL.getUniformLocation(program, 'pixel'), new Float32Array([1 / width, 1 / height]));
+
+      this.textures = {
+        color: GL.createTexture(),
+        light: GL.createTexture(),
+      };
+
+      this.color = new Uint8ClampedArray(width * height * 3);
+      // Rasterize initial image
+      {
+        const rasterizer = document.createElement('canvas');
+        const ctx = rasterizer.getContext('2d');
+        rasterizer.width = width;
+        rasterizer.height = height;
+        ctx.save();
+        image({ ctx, width, height, isMobile });
+        ctx.restore();
+        const { data } = ctx.getImageData(0, 0, width, height);
+        for (let i = 0, c = 0, l = data.length; i < l; i += 4, c += 3) {
+          const a = data[i + 3] / 0xFF;
+          this.color.set([
+            Math.floor(data[i] * a),
+            Math.floor(data[i + 1] * a),
+            Math.floor(data[i + 2] * a),
+          ], c);
+        }
+      }
+      GL.bindTexture(GL.TEXTURE_2D, this.textures.color);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+      GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGB, width, height, 0, GL.RGB, GL.UNSIGNED_BYTE, this.color);
+
+      this.light = new Uint8ClampedArray(width * height);
+      GL.bindTexture(GL.TEXTURE_2D, this.textures.light);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+      GL.texImage2D(GL.TEXTURE_2D, 0, GL.LUMINANCE, width, height, 0, GL.LUMINANCE, GL.UNSIGNED_BYTE, this.light);
     }
-    this.upscaler = document.createElement('canvas');
-    this.upscalerContext = this.upscaler.getContext('2d', { alpha: false });
-    dom.appendChild(this.upscaler);
+    dom.appendChild(this.canvas);
 
     // UI
     const ui = document.createElement('div');
@@ -160,11 +258,11 @@ class Renderer {
       }
     });
     const updatePointer = (e) => {
-      const { upscalerBounds: bounds } = this;
+      const { bounds } = this;
       this.input.x = Math.round((Math.min(Math.max(e.pageX - bounds.x, 0), bounds.width) / bounds.width) * (width - 1));
       this.input.y = Math.round((1 - (Math.min(Math.max(e.pageY - bounds.y, 0), bounds.height) / bounds.height)) * (height - 1));
     };
-    this.upscaler.addEventListener('mousedown', (e) => {
+    this.canvas.addEventListener('mousedown', (e) => {
       this.input.action = e.button;
       updatePointer(e);
     });
@@ -174,7 +272,7 @@ class Renderer {
     });
 
     // Emulate mouse on mobile
-    this.upscaler.addEventListener('touchstart', (e) => {
+    this.canvas.addEventListener('touchstart', (e) => {
       if (this.input.touch !== false) {
         return;
       }
@@ -214,11 +312,9 @@ class Renderer {
   }
 
   clear() {
-    const { onClear, pixels } = this;
-    const pixel = new Uint8ClampedArray(3);
-    for (let i = 0, l = pixels.data.length; i < l; i += 4) {
-      pixels.data.set(pixel, i);
-    }
+    const { onClear, color, light } = this;
+    color.fill(0);
+    light.fill(0);
     if (onClear) {
       onClear();
     }
@@ -226,26 +322,31 @@ class Renderer {
 
   render() {
     const {
-      pixels,
-      rasterizer,
-      rasterizerContext,
-      upscaler,
-      upscalerContext,
+      canvas,
+      context: GL,
+      textures,
+      color,
+      light,
       width,
       height,
     } = this;
-    rasterizerContext.putImageData(pixels, 0, 0);
-    upscalerContext.drawImage(rasterizer, 0, 0, width, height, 0, 0, upscaler.width, upscaler.height);
+    GL.activeTexture(GL.TEXTURE0);
+    GL.bindTexture(GL.TEXTURE_2D, textures.color);
+    GL.texSubImage2D(GL.TEXTURE_2D, 0, 0, 0, width, height, GL.RGB, GL.UNSIGNED_BYTE, color);
+    GL.activeTexture(GL.TEXTURE1);
+    GL.bindTexture(GL.TEXTURE_2D, textures.light);
+    GL.texSubImage2D(GL.TEXTURE_2D, 0, 0, 0, width, height, GL.LUMINANCE, GL.UNSIGNED_BYTE, light);
+    GL.drawArrays(GL.TRIANGLES, 0, 6);
   }
 
   resize() {
     const {
+      canvas,
+      context: GL,
+      ui,
       aspect,
-      upscaler: canvas,
-      upscalerContext: ctx,
       width,
       height,
-      ui,
     } = this;
     const viewport = {
       width: window.innerWidth,
@@ -259,26 +360,23 @@ class Renderer {
     }
     canvas.width = Math.floor(width * scale);
     canvas.height = Math.floor(height * scale);
-    ctx.imageSmoothingEnabled = false;
-    ctx.globalCompositeOperation = 'copy';
-    this.upscalerBounds = canvas.getBoundingClientRect();
+    GL.viewport(0, 0, GL.drawingBufferWidth, GL.drawingBufferHeight);
+    this.bounds = canvas.getBoundingClientRect();
   }
 
   snap() {
     const {
+      canvas,
+      context: GL,
       downloader,
-      rasterizer,
-      upscaler: canvas,
-      upscalerContext: ctx,
       width,
       height,
     } = this;
     const scale = 8;
     canvas.width = Math.floor(width * scale);
     canvas.height = Math.floor(height * scale);
-    ctx.imageSmoothingEnabled = false;
-    ctx.globalCompositeOperation = 'copy';
-    ctx.drawImage(rasterizer, 0, 0, width, height, 0, 0, canvas.width, canvas.height);
+    GL.viewport(0, 0, GL.drawingBufferWidth, GL.drawingBufferHeight);
+    this.render();
     canvas.toBlob((blob) => {
       downloader.download = `Cells-${Date.now()}.png`;
       downloader.href = URL.createObjectURL(blob);
