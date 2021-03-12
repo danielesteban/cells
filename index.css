@@ -42,7 +42,7 @@ html, body, #wrapper {
 
 #ui > div {
   display: flex;
-  height: 40px;
+  height: 32px;
 }
 
 #ui > div:last-child {
@@ -63,7 +63,7 @@ html, body, #wrapper {
   padding: 0 0.75rem;
   border: 0;
   outline: 0;
-  border: 1px solid #111;
+  border-left: 2px solid #111;
   text-decoration: none;
   cursor: pointer;
   font-family: inherit;
@@ -81,12 +81,16 @@ html, body, #wrapper {
   background: transparent;
   border: 0;
   outline: 0;
-  margin: 0;
+  margin: 0 0.5rem 0 -0.5rem;
   padding: 0;
-  margin-right: 0.5rem;
-  width: 20px;
+  width: 32px;
+  height: 32px;
   font-family: inherit;
   cursor: pointer;
+}
+
+#ui > div:first-child button:first-child  {
+  border-left: 0;
 }
 
 #ui > div > div {
