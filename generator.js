@@ -31,6 +31,8 @@ function Generator({
           Math.floor((g + (Math.random() - 0.5) * input.noise * 2 * l) * light),
           Math.floor((b + (Math.random() - 0.5) * input.noise * 2 * l) * light),
         ], index * 3);
+      } else if (n > 0.45) {
+        water.state[index] = water.step[index] = 1;
       }
     }
   }
