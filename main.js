@@ -12,7 +12,7 @@ const types = {
 const renderer = new Renderer({
   shader: `
     float luminance = (
-      texture2D(light, uv + vec2(-pixel.x, -pixel.y)).x
+      texture2D(light, uv - pixel).x
       + texture2D(light, uv + vec2(0, -pixel.y)).x
       + texture2D(light, uv + vec2(pixel.x, -pixel.y)).x
       + texture2D(light, uv + vec2(-pixel.x, 0)).x
@@ -20,15 +20,21 @@ const renderer = new Renderer({
       + texture2D(light, uv + vec2(pixel.x, 0)).x
       + texture2D(light, uv + vec2(-pixel.x, pixel.y)).x
       + texture2D(light, uv + vec2(0, pixel.y)).x
-      + texture2D(light, uv + vec2(pixel.x, pixel.y)).x
+      + texture2D(light, uv + pixel).x
     ) / 9.0;
-    gl_FragColor = vec4(
-      blendSoftLight(
-        texture2D(color, uv).xyz,
-        vec3(0.5 + (luminance * luminance) * 0.5)
-      ),
-      1.0
-    );
+    luminance *= luminance;
+    vec3 col = texture2D(color, uv).xyz;
+    if (luminance > 0.0) {
+      vec3 blur = (
+        texture2D(color, uv + pixel).xyz
+        + texture2D(color, uv - pixel).xyz
+        + texture2D(color, uv + vec2(pixel.x, -pixel.y)).xyz
+        + texture2D(color, uv + vec2(-pixel.x, pixel.y)).xyz
+      ) / 4.0;
+      col = mix(col, blur, luminance * 0.5);
+    }
+    col = blendSoftLight(col, vec3(0.5 + luminance * 0.5));
+    gl_FragColor = vec4(col, 1.0);
   `,
   textures: [
     {
