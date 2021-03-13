@@ -102,15 +102,13 @@ class Renderer {
       };
 
       this.color = new Uint8ClampedArray(width * height * 3);
-      // Rasterize initial image
       {
+        // Rasterize initial image
         const rasterizer = document.createElement('canvas');
         const ctx = rasterizer.getContext('2d');
         rasterizer.width = width;
         rasterizer.height = height;
-        ctx.save();
         image({ ctx, width, height, isMobile });
-        ctx.restore();
         const { data } = ctx.getImageData(0, 0, width, height);
         for (let i = 0, c = 0, l = data.length; i < l; i += 4, c += 3) {
           const a = data[i + 3] / 0xFF;
