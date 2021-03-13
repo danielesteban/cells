@@ -4,8 +4,8 @@
 
 class Renderer {
   constructor({
-    image,
     shader,
+    textures,
     types,
   }) {
     const dom = document.getElementById('renderer');
@@ -41,7 +41,8 @@ class Renderer {
       );
       const GL = this.context;
 
-      const vertexShader = `
+      const vertex = GL.createShader(GL.VERTEX_SHADER);
+      GL.shaderSource(vertex, `
         precision mediump float;
         attribute vec2 position;
         varying vec2 uv;
@@ -49,14 +50,14 @@ class Renderer {
           gl_Position = vec4(position, 0.0, 1.0);
           uv = (position * vec2(0.5, -0.5) + vec2(0.5));
         }
-      `;
-
-      const fragmentShader = `
+      `);
+      GL.compileShader(vertex);
+      const fragment = GL.createShader(GL.FRAGMENT_SHADER);
+      GL.shaderSource(fragment, `
         precision mediump float;
         varying vec2 uv;
-        uniform sampler2D color;
-        uniform sampler2D light;
         uniform vec2 pixel;
+        ${textures.map(({ id }) => (`uniform sampler2D ${id};`)).join('\n')}
         vec3 blendSoftLight(vec3 base, vec3 blend) {
           return mix(
             sqrt(base) * (2.0 * blend - 1.0) + 2.0 * base * (1.0 - blend), 
@@ -67,72 +68,75 @@ class Renderer {
         void main(void) {
           ${shader}
         }
-      `;
-
-      const vertex = GL.createShader(GL.VERTEX_SHADER);
-      GL.shaderSource(vertex, vertexShader);
-      GL.compileShader(vertex);
-      const fragment = GL.createShader(GL.FRAGMENT_SHADER);
-      GL.shaderSource(fragment, fragmentShader);
+      `);
       GL.compileShader(fragment);
       const program = GL.createProgram();
       GL.attachShader(program, vertex);
       GL.attachShader(program, fragment);
       GL.linkProgram(program);
       GL.useProgram(program);
+      GL.uniform2fv(GL.getUniformLocation(program, 'pixel'), new Float32Array([1 / width, 1 / height]));
       this.program = program;
 
-      const buffer = GL.createBuffer();
-      GL.bindBuffer(GL.ARRAY_BUFFER, buffer);
-      GL.bufferData(GL.ARRAY_BUFFER, new Float32Array([
-        -1, -1,    1, 1,    -1, 1, 
-        1, -1,    1, 1,    -1, -1, 
-      ]), GL.STATIC_DRAW);
-      const attribute = GL.getAttribLocation(program, 'position')
-      GL.vertexAttribPointer(attribute, 2, GL.FLOAT, 0, 0, 0);
-      GL.enableVertexAttribArray(attribute);
-
-      GL.uniform1i(GL.getUniformLocation(program, 'color'), 0);
-      GL.uniform1i(GL.getUniformLocation(program, 'light'), 1);
-      GL.uniform2fv(GL.getUniformLocation(program, 'pixel'), new Float32Array([1 / width, 1 / height]));
-
-      this.textures = {
-        color: GL.createTexture(),
-        light: GL.createTexture(),
-      };
-
-      this.color = new Uint8ClampedArray(width * height * 3);
       {
-        // Rasterize initial image
-        const rasterizer = document.createElement('canvas');
-        const ctx = rasterizer.getContext('2d');
-        rasterizer.width = width;
-        rasterizer.height = height;
-        image({ ctx, width, height, isMobile });
-        const { data } = ctx.getImageData(0, 0, width, height);
-        for (let i = 0, c = 0, l = data.length; i < l; i += 4, c += 3) {
-          const a = data[i + 3] / 0xFF;
-          this.color.set([
-            Math.floor(data[i] * a),
-            Math.floor(data[i + 1] * a),
-            Math.floor(data[i + 2] * a),
-          ], c);
-        }
+        const buffer = GL.createBuffer();
+        GL.bindBuffer(GL.ARRAY_BUFFER, buffer);
+        GL.bufferData(GL.ARRAY_BUFFER, new Float32Array([
+          -1, -1,    1, 1,    -1, 1, 
+          1, -1,    1, 1,    -1, -1, 
+        ]), GL.STATIC_DRAW);
+        const attribute = GL.getAttribLocation(program, 'position')
+        GL.vertexAttribPointer(attribute, 2, GL.FLOAT, 0, 0, 0);
+        GL.enableVertexAttribArray(attribute);
       }
-      GL.bindTexture(GL.TEXTURE_2D, this.textures.color);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-      GL.texImage2D(GL.TEXTURE_2D, 0, GL.RGB, width, height, 0, GL.RGB, GL.UNSIGNED_BYTE, this.color);
 
-      this.light = new Uint8ClampedArray(width * height);
-      GL.bindTexture(GL.TEXTURE_2D, this.textures.light);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-      GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-      GL.texImage2D(GL.TEXTURE_2D, 0, GL.LUMINANCE, width, height, 0, GL.LUMINANCE, GL.UNSIGNED_BYTE, this.light);
+      this.textures = textures.map(({ id, format, image }, unit) => {
+        const texture = GL.createTexture();
+        GL.bindTexture(GL.TEXTURE_2D, texture);
+        let buffer;
+        switch (format) {
+          case 'rgb':
+            format = GL.RGB;
+            buffer = new Uint8ClampedArray(width * height * 3);
+            if (image) {
+              // Rasterize initial image
+              const rasterizer = document.createElement('canvas');
+              const ctx = rasterizer.getContext('2d');
+              rasterizer.width = width;
+              rasterizer.height = height;
+              ctx.clearRect(0, 0, width, height);
+              image({ ctx, width, height, isMobile });
+              const { data } = ctx.getImageData(0, 0, width, height);
+              for (let i = 0, c = 0, l = data.length; i < l; i += 4, c += 3) {
+                const a = data[i + 3] / 0xFF;
+                buffer.set([
+                  Math.floor(data[i] * a),
+                  Math.floor(data[i + 1] * a),
+                  Math.floor(data[i + 2] * a),
+                ], c);
+              }
+            }
+            break;
+          case 'luminance':
+            format = GL.LUMINANCE;
+            buffer = new Uint8ClampedArray(width * height);
+            break;
+        }
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+        GL.texImage2D(GL.TEXTURE_2D, 0, format, width, height, 0, format, GL.UNSIGNED_BYTE, buffer);
+        GL.uniform1i(GL.getUniformLocation(program, id), unit);
+        return {
+          id,
+          buffer,
+          format,
+          needsUpdate: true,
+          texture,
+          unit: GL[`TEXTURE${unit}`],
+        }
+      });
     }
     dom.appendChild(this.canvas);
 
@@ -310,9 +314,8 @@ class Renderer {
   }
 
   clear() {
-    const { onClear, color, light } = this;
-    color.fill(0);
-    light.fill(0);
+    const { onClear, textures } = this;
+    textures.forEach(({ buffer }) => buffer.fill(0));
     if (onClear) {
       onClear();
     }
@@ -323,17 +326,18 @@ class Renderer {
       canvas,
       context: GL,
       textures,
-      color,
-      light,
       width,
       height,
     } = this;
-    GL.activeTexture(GL.TEXTURE0);
-    GL.bindTexture(GL.TEXTURE_2D, textures.color);
-    GL.texSubImage2D(GL.TEXTURE_2D, 0, 0, 0, width, height, GL.RGB, GL.UNSIGNED_BYTE, color);
-    GL.activeTexture(GL.TEXTURE1);
-    GL.bindTexture(GL.TEXTURE_2D, textures.light);
-    GL.texSubImage2D(GL.TEXTURE_2D, 0, 0, 0, width, height, GL.LUMINANCE, GL.UNSIGNED_BYTE, light);
+    textures.forEach((data) => {
+      if (data.needsUpdate) {
+        data.needsUpdate = false;
+        const { buffer, format, texture, unit } = data;
+        GL.activeTexture(unit);
+        GL.bindTexture(GL.TEXTURE_2D, texture);
+        GL.texSubImage2D(GL.TEXTURE_2D, 0, 0, 0, width, height, format, GL.UNSIGNED_BYTE, buffer);
+      }
+    });
     GL.drawArrays(GL.TRIANGLES, 0, 6);
   }
 
