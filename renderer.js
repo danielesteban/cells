@@ -6,6 +6,7 @@ class Renderer {
   constructor({
     shader,
     textures,
+    tools,
     types,
   }) {
     const dom = document.getElementById('renderer');
@@ -234,6 +235,12 @@ class Renderer {
     snap.innerText = 'SNAP';
     snap.addEventListener('click', this.snap.bind(this));
     uiGroups[2].appendChild(snap);
+    (tools || []).forEach(({ name, action }) => {
+      const tool = document.createElement('button');
+      tool.innerText = name;
+      tool.addEventListener('click', action);
+      uiGroups[2].appendChild(tool);
+    });
     const clear = document.createElement('button');
     clear.innerText = 'CLEAR';
     clear.addEventListener('click', this.clear.bind(this));
