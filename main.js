@@ -81,7 +81,6 @@ const renderer = new Renderer({
           cells,
           water,
           color,
-          light,
           input,
           width,
           height,

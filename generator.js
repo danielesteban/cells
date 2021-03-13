@@ -5,7 +5,6 @@ function Generator({
   cells,
   water,
   color,
-  light,
   input,
   width,
   height,
