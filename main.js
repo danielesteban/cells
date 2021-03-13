@@ -199,6 +199,7 @@ const waterOutline = (x, y) => {
 
 // Main loop
 let lastFrameTime = performance.now();
+let simulationStep = 0;
 const animate = () => {
   requestAnimationFrame(animate);
 
@@ -206,8 +207,8 @@ const animate = () => {
   const delta = Math.min((frameTime - lastFrameTime) / 1000, 1 / 30);
   lastFrameTime = frameTime;
 
-  const steps = Math.floor(270 * delta) * 2;
-  for (let step = 0; step < steps; step += 1) {
+  const steps = Math.floor(500 * delta);
+  for (let s = 0; s < steps; s += 1, simulationStep += 1) {
     // Process Input
     if (input.action !== false) {
       input.brushOffsets.forEach((offset) => {
@@ -252,8 +253,8 @@ const animate = () => {
     }
 
     // Simulate sand
-    if (step % 2 === 0) {
-      const s = step % 4 === 0;
+    if (simulationStep % 2 === 0) {
+      const s = simulationStep % 4 === 0;
       const nx = s ? 1 : -1;
       for (let y = 0; y < height; y += 1) {
         for (let sx = 0; sx < width; sx += 1) {
