@@ -42,7 +42,12 @@ html, body, #wrapper {
 
 #ui > div {
   display: flex;
-  height: 32px;
+  min-height: 32px;
+}
+
+#ui > div:first-child {
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 #ui > div:last-child {
@@ -73,6 +78,10 @@ html, body, #wrapper {
 #ui button.active {
   background: linear-gradient(to bottom, #999, #444);
   color: #222;
+}
+
+#ui > div:first-child button {
+  width: 90px;
 }
 
 #ui button > input[type="color"] {

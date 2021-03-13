@@ -1,3 +1,4 @@
+import Generator from './generator.js';
 import Renderer from './renderer.js';
 
 // Setup
@@ -64,11 +65,30 @@ const renderer = new Renderer({
       format: 'luminance',
     },
   ],
+  tools: [
+    {
+      name: 'RANDOM',
+      action: () => {
+        renderer.clear();
+        Generator({
+          types,
+          cells,
+          water,
+          color,
+          light,
+          input,
+          width,
+          height,
+          cellIndex,
+        });
+      },
+    },
+  ],
   types: [
-    { id: types.clay, name: 'CLAY', color: { r: 0x44, g: 0x44, b: 0x33 } },
+    { id: types.clay, name: 'CLAY', color: { r: 0x33, g: 0x22, b: 0x11 } },
     { id: types.light, name: 'LIGHT', color: { r: 0x99, g: 0x99, b: 0x88 } },
     { id: types.sand, name: 'SAND', color: { r: 0x66, g: 0x66, b: 0x00 } },
-    { id: types.water, name: 'WATER', color: { r: 0x22, g: 0x44, b: 0x88 } },
+    { id: types.water, name: 'WATER', color: { r: 0x44, g: 0x11, b: 0x66 } },
     { id: types.air, name: 'AIR', color: { r: 0x11, g: 0x22, b: 0x33 } },
   ],
 });
