@@ -83,8 +83,8 @@ class Renderer {
         const buffer = GL.createBuffer();
         GL.bindBuffer(GL.ARRAY_BUFFER, buffer);
         GL.bufferData(GL.ARRAY_BUFFER, new Float32Array([
-          -1, -1,    1, 1,    -1, 1, 
-          1, -1,    1, 1,    -1, -1, 
+          -1, -1,    1, -1,    1, 1, 
+          1, 1,     -1, 1,    -1, -1, 
         ]), GL.STATIC_DRAW);
         const attribute = GL.getAttribLocation(program, 'position')
         GL.vertexAttribPointer(attribute, 2, GL.FLOAT, 0, 0, 0);
