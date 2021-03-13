@@ -9,31 +9,6 @@ const types = {
   water: 0x04,
 };
 const renderer = new Renderer({
-  image: ({ ctx, width, height, isMobile }) => {
-    ctx.shadowBlur = 2;
-    ctx.shadowColor = '#333';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#eee';
-    ctx.font = '700 18px monospace';
-    ctx.fillText('CELLS', width * 0.5, height * 0.2);
-    ctx.fillStyle = '#666';
-    ctx.font = '700 13px monospace';
-    ctx.fillText('dani@gatunes © 2021', width * 0.5, height * 0.3);
-    ctx.fillStyle = '#ccc';
-    ctx.font = '700 10px monospace';
-    if (isMobile) {
-      ctx.fillText('Tap to Paint', width * 0.5, height * 0.7);
-      return;
-    }
-    [
-      'Left click: Paint',
-      'Right click: Erase',
-      '1-4: Select cell type',
-      'Esc: Clear canvas',
-    ].forEach((text, i) => {
-      ctx.fillText(text, width * 0.5, height * (0.6 + i * 0.075));
-    });
-  },
   shader: `
     float luminance = (
       texture2D(light, uv + vec2(-pixel.x, -pixel.y)).x
@@ -54,6 +29,41 @@ const renderer = new Renderer({
       1.0
     );
   `,
+  textures: [
+    {
+      id: 'color',
+      format: 'rgb',
+      image: ({ ctx, width, height, isMobile }) => {
+        ctx.shadowBlur = 2;
+        ctx.shadowColor = '#333';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#eee';
+        ctx.font = '700 18px monospace';
+        ctx.fillText('CELLS', width * 0.5, height * 0.2);
+        ctx.fillStyle = '#666';
+        ctx.font = '700 13px monospace';
+        ctx.fillText('dani@gatunes © 2021', width * 0.5, height * 0.3);
+        ctx.fillStyle = '#ccc';
+        ctx.font = '700 10px monospace';
+        if (isMobile) {
+          ctx.fillText('Tap to Paint', width * 0.5, height * 0.7);
+          return;
+        }
+        [
+          'Left click: Paint',
+          'Right click: Erase',
+          '1-4: Select cell type',
+          'Esc: Clear canvas',
+        ].forEach((text, i) => {
+          ctx.fillText(text, width * 0.5, height * (0.6 + i * 0.075));
+        });
+      },
+    },
+    {
+      id: 'light',
+      format: 'luminance',
+    },
+  ],
   types: [
     { id: types.clay, name: 'CLAY', color: { r: 0x44, g: 0x44, b: 0x33 } },
     { id: types.light, name: 'LIGHT', color: { r: 0x99, g: 0x99, b: 0x88 } },
@@ -65,15 +75,15 @@ const renderer = new Renderer({
 const {
   debug,
   input,
-  color,
-  light,
   width,
   height,
 } = renderer;
 
+const color = renderer.textures.find(({ id }) => (id === 'color'));
+const light = renderer.textures.find(({ id }) => (id === 'light'));
 const cells = new Uint8ClampedArray(width * height);
-for (let i = 0, l = color.length; i < l; i += 3) {
-  if (color[i] || color[i + 1] || color[i + 2]) {
+for (let i = 0, l = color.buffer.length; i < l; i += 3) {
+  if (color.buffer[i] || color.buffer[i + 1] || color.buffer[i + 2]) {
     cells[i / 3] = types.clay;
   }
 }
@@ -81,7 +91,6 @@ const water = {
   state: new Float32Array(width * height),
   step: new Float32Array(width * height),
 };
-
 renderer.onClear = () => {
   cells.fill(0);
   water.state.fill(0);
@@ -122,7 +131,7 @@ const floodLight = (queue) => {
   const next = [];
   queue.forEach(({ x, y }) => {
     const index = cellIndex(x, y);
-    const level = light[index];
+    const level = light.buffer[index];
     neighbors.forEach((offset) => {
       const nx = x + offset.x;
       const ny = y + offset.y;
@@ -131,11 +140,11 @@ const floodLight = (queue) => {
       if (
         neighbor === -1
         || cells[neighbor] === types.clay
-        || light[neighbor] >= nl
+        || light.buffer[neighbor] >= nl
       ) {
         return;
       }
-      light[neighbor] = nl;
+      light.buffer[neighbor] = nl;
       next.push({ x: nx, y: ny });
     });
   });
@@ -189,6 +198,12 @@ const animate = () => {
         if (index === -1) {
           return;
         }
+        if (
+          cells[index] === types.clay || cells[index] === types.light
+          || input.type === types.clay || input.type === types.light
+        ) {
+          light.needsUpdate = true;
+        }
         if (input.action === actions.erase || input.type === types.air) {
           cells[index] = types.air;
           water.state[index] = water.step[index] = 0;
@@ -201,7 +216,7 @@ const animate = () => {
             cells[index] = input.type;
             water.state[index] = water.step[index] = 0;
             const { r, g, b, l } = input.colors[input.type];
-            color.set([
+            color.buffer.set([
               Math.floor(r + (Math.random() - 0.5) * input.noise * 2 * l),
               Math.floor(g + (Math.random() - 0.5) * input.noise * 2 * l),
               Math.floor(b + (Math.random() - 0.5) * input.noise * 2 * l),
@@ -244,7 +259,7 @@ const animate = () => {
             cells[target] = types.sand;
             water.state[index] = water.step[index] = Math.min(water.state[target], maxMass);
             water.state[target] = water.step[target] = 0;
-            color.copyWithin(target * 3, index * 3, (index * 3) + 3);
+            color.buffer.copyWithin(target * 3, index * 3, (index * 3) + 3);
           }
         }
       }
@@ -291,9 +306,11 @@ const animate = () => {
     water.state.set(water.step);
   }
 
-  light.fill(0);
-  const lightQueue = [];
-
+  let lightQueue;
+  if (light.needsUpdate) {
+    lightQueue = [];
+    light.buffer.fill(0);
+  }
   const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
   for (let y = 0; y < height; y += 1) {
@@ -301,8 +318,8 @@ const animate = () => {
       const index = cellIndex(x, y);
 
       // Queue lights for propagation
-      if (cells[index] === types.light) {
-        light[index] = 0xFF;
+      if (light.needsUpdate && cells[index] === types.light) {
+        light.buffer[index] = 0xFF;
         lightQueue.push({ x, y });
       }
   
@@ -328,15 +345,18 @@ const animate = () => {
           pixel[1] = Math.floor((pixel[1] + waterColor.g * light) / 2);
           pixel[2] = Math.floor((pixel[2] + waterColor.b * light) / 2);
         }
-        color.set(pixel, index * 3);
+        color.buffer.set(pixel, index * 3);
       }
     }
   }
 
   // Propagate light
-  floodLight(lightQueue);
+  if (light.needsUpdate) {
+    floodLight(lightQueue);
+  }
 
   // Render
+  color.needsUpdate = true;
   renderer.render();
   debug.innerText = `${Math.floor(performance.now() - frameTime)}ms`;
 };
