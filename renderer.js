@@ -315,7 +315,10 @@ class Renderer {
 
   clear() {
     const { onClear, textures } = this;
-    textures.forEach(({ buffer }) => buffer.fill(0));
+    textures.forEach((texture) => {
+      texture.buffer.fill(0);
+      texture.needsUpdate = true;
+    });
     if (onClear) {
       onClear();
     }

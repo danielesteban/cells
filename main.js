@@ -308,9 +308,11 @@ const animate = () => {
 
   let lightQueue;
   if (light.needsUpdate) {
-    lightQueue = [];
+    // Clear light texture
     light.buffer.fill(0);
+    lightQueue = [];
   }
+
   const airColor = input.colors[types.air];
   const waterColor = input.colors[types.water];
   for (let y = 0; y < height; y += 1) {
