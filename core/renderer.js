@@ -5,7 +5,6 @@
 class Renderer {
   constructor({
     shader,
-    textures,
     tools,
     types,
   }) {
@@ -14,6 +13,7 @@ class Renderer {
     const width = isMobile ? 160 : 320;
     const height = 240;
     this.aspect = width / height;
+    this.isMobile = isMobile;
     this.width = width;
     this.height = height;
     this.input = {
@@ -58,7 +58,6 @@ class Renderer {
         precision mediump float;
         varying vec2 uv;
         uniform vec2 pixel;
-        ${textures.map(({ id }) => (`uniform sampler2D ${id};`)).join('\n')}
         vec3 blendSoftLight(vec3 base, vec3 blend) {
           return mix(
             sqrt(base) * (2.0 * blend - 1.0) + 2.0 * base * (1.0 - blend), 
@@ -66,9 +65,7 @@ class Renderer {
             step(base, vec3(0.5))
           );
         }
-        void main(void) {
-          ${shader}
-        }
+        ${shader}
       `);
       GL.compileShader(fragment);
       const program = GL.createProgram();
@@ -91,53 +88,7 @@ class Renderer {
         GL.enableVertexAttribArray(attribute);
       }
 
-      this.textures = textures.map(({ id, format, image }, unit) => {
-        const texture = GL.createTexture();
-        GL.bindTexture(GL.TEXTURE_2D, texture);
-        let buffer;
-        switch (format) {
-          case 'rgb':
-            format = GL.RGB;
-            buffer = new Uint8ClampedArray(width * height * 3);
-            if (image) {
-              // Rasterize initial image
-              const rasterizer = document.createElement('canvas');
-              const ctx = rasterizer.getContext('2d');
-              rasterizer.width = width;
-              rasterizer.height = height;
-              ctx.clearRect(0, 0, width, height);
-              image({ ctx, width, height, isMobile });
-              const { data } = ctx.getImageData(0, 0, width, height);
-              for (let i = 0, c = 0, l = data.length; i < l; i += 4, c += 3) {
-                const a = data[i + 3] / 0xFF;
-                buffer.set([
-                  Math.floor(data[i] * a),
-                  Math.floor(data[i + 1] * a),
-                  Math.floor(data[i + 2] * a),
-                ], c);
-              }
-            }
-            break;
-          case 'luminance':
-            format = GL.LUMINANCE;
-            buffer = new Uint8ClampedArray(width * height);
-            break;
-        }
-        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
-        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
-        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
-        GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-        GL.texImage2D(GL.TEXTURE_2D, 0, format, width, height, 0, format, GL.UNSIGNED_BYTE, buffer);
-        GL.uniform1i(GL.getUniformLocation(program, id), unit);
-        return {
-          id,
-          buffer,
-          format,
-          needsUpdate: true,
-          texture,
-          unit: GL[`TEXTURE${unit}`],
-        }
-      });
+      this.textures = [];
     }
     dom.appendChild(this.canvas);
 
@@ -318,6 +269,69 @@ class Renderer {
       this.input.action = false;
       this.input.touch = false;
     });
+  }
+
+  addTexture({ id, buffer, format, image }) {
+    const {
+      context: GL,
+      isMobile,
+      program,
+      textures,
+      width,
+      height,
+    } = this;
+    const unit = textures.length;
+    const texture = GL.createTexture();
+    GL.bindTexture(GL.TEXTURE_2D, texture);
+    switch (format) {
+      case 'rgb':
+        format = GL.RGB;
+        if (!buffer) {
+          console.log('ni')
+          buffer = new Uint8ClampedArray(width * height * 3);
+        }
+        if (image) {
+          // Rasterize initial image
+          const rasterizer = document.createElement('canvas');
+          const ctx = rasterizer.getContext('2d');
+          rasterizer.width = width;
+          rasterizer.height = height;
+          ctx.clearRect(0, 0, width, height);
+          image({ ctx, width, height, isMobile });
+          const { data } = ctx.getImageData(0, 0, width, height);
+          for (let i = 0, c = 0, l = data.length; i < l; i += 4, c += 3) {
+            const a = data[i + 3] / 0xFF;
+            buffer.set([
+              Math.floor(data[i] * a),
+              Math.floor(data[i + 1] * a),
+              Math.floor(data[i + 2] * a),
+            ], c);
+          }
+        }
+        break;
+      case 'luminance':
+        format = GL.LUMINANCE;
+        if (!buffer) {
+          buffer = new Uint8ClampedArray(width * height);
+        }
+        break;
+    }
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+    GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+    GL.texImage2D(GL.TEXTURE_2D, 0, format, width, height, 0, format, GL.UNSIGNED_BYTE, buffer);
+    GL.uniform1i(GL.getUniformLocation(program, id), unit);
+    const data = {
+      id,
+      buffer,
+      format,
+      needsUpdate: true,
+      texture,
+      unit: GL[`TEXTURE${unit}`],
+    };
+    textures.push(data);
+    return data;
   }
 
   clear() {
