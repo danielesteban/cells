@@ -236,8 +236,8 @@ class SimulationJS {
     const next = [];
     queue.forEach((index) => {
       const level = light[index];
+      const nl = Math.max(level - 2, 0);
       for (let n = 0; n < 4; n += 1) {
-        const nl = Math.max(level - 2, 0);
         const neighbor = neighbors[index * 4 + n];
         if (
           neighbor === -1
