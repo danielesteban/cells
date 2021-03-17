@@ -117,11 +117,9 @@ void simulateWater(
     }
   }
   
-  float *lastState = &state[size - 1];
-  while (state <= lastState) {
+  const float *last = &state[size - 1];
+  for (; state != last; ++state, ++step) {
     *state = *step;
-    step++;
-    state++;
   }
 }
 
@@ -182,10 +180,54 @@ void updateColor(
   }
 }
 
-static void floodLight(void) {
-  // TODO!
+static void floodLight(
+  unsigned char *cells,
+  unsigned char *light,
+  int *neighbors,
+  unsigned int *queue,
+  const unsigned int size,
+  unsigned int *next
+) {
+  unsigned int nextLength = 0;
+  for (unsigned int i = 0; i < size; i++) {
+    const unsigned int index = queue[i];
+    const unsigned char level = light[index];
+    const unsigned char nl = level <= 2 ? 0 : level - 2;
+    for (unsigned int n = 0; n < 4; n += 1) {
+      const int neighbor = neighbors[index * 4 + n];
+      if (
+        neighbor == -1
+        || cells[neighbor] == 1
+        || light[neighbor] >= nl
+      ) {
+        continue;
+      }
+      light[neighbor] = nl;
+      next[nextLength] = neighbor;
+      nextLength++;
+    }
+  }
+  if (nextLength > 0) {
+    floodLight(cells, light, neighbors, next, nextLength, queue);
+  }
 }
 
-void updateLight(void) {
-  // TODO!
+void updateLight(
+  const unsigned int size,
+  const unsigned char type,
+  unsigned char *cells,
+  unsigned char *light,
+  int *neighbors,
+  unsigned int *queueA,
+  unsigned int *queueB
+) {
+  unsigned int queueLength = 0;
+  for (unsigned int index = 0; index < size; index++) {
+    if (cells[index] == type) {
+      light[index] = 0xFF;
+      queueA[queueLength] = index;
+      queueLength++;
+    }
+  }
+  floodLight(cells, light, neighbors, queueA, queueLength, queueB);
 }

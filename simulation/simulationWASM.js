@@ -13,9 +13,10 @@ class SimulationWASM {
         1                                       // cell type
         + 3                                     // RGB color
         + 1                                     // light level
-        + Int32Array.BYTES_PER_ELEMENT * 4      // neighbors LUT
+        + 4 * Int32Array.BYTES_PER_ELEMENT      // neighbors LUT
         + 1                                     // background noise
-        + Float32Array.BYTES_PER_ELEMENT * 2    // water state + step
+        + 2 * Int32Array.BYTES_PER_ELEMENT      // propagation queues
+        + 2 * Float32Array.BYTES_PER_ELEMENT    // water state + step
       )) / 65536
     ) + 1;
     const memory = new WebAssembly.Memory({ initial: pages, maximum: pages });    
@@ -69,7 +70,7 @@ class SimulationWASM {
       base,
       buffer: new Int32Array(memory.buffer, base, size * 4),
     };
-    base += size * Int32Array.BYTES_PER_ELEMENT * 4;
+    base += size * 4 * Int32Array.BYTES_PER_ELEMENT;
     {
       const neighbors = [
         { x: 0, y: -1 },
@@ -98,6 +99,18 @@ class SimulationWASM {
       }
     }
 
+    this.queues = {
+      a: {
+        base,
+        buffer: new Int32Array(memory.buffer, base, size),
+      },
+      b: {
+        base: base + size * Int32Array.BYTES_PER_ELEMENT,
+        buffer: new Int32Array(memory.buffer, base + size * Int32Array.BYTES_PER_ELEMENT, size),
+      }
+    };
+    base += size * 2 * Int32Array.BYTES_PER_ELEMENT;
+
     this.water = {
       state: {
         base,
@@ -108,7 +121,7 @@ class SimulationWASM {
         buffer: new Float32Array(memory.buffer, base + size * Float32Array.BYTES_PER_ELEMENT, size),
       },
     };
-    base += size * Float32Array.BYTES_PER_ELEMENT * 2;
+    base += size * 2 * Float32Array.BYTES_PER_ELEMENT;
   }
 
   step() {
@@ -164,55 +177,26 @@ class SimulationWASM {
     );
   }
 
-  // TODO: Port this into the C implementation
-  floodLight(queue) {
-    const { types } = SimulationWASM;
-    const {
-      cells: { buffer: cells },
-      light: { buffer: light },
-      neighbors: { buffer: neighbors },
-    } = this;
-    const next = [];
-    queue.forEach((index) => {
-      const level = light[index];
-      for (let n = 0; n < 4; n += 1) {
-        const nl = Math.max(level - 2, 0);
-        const neighbor = neighbors[index * 4 + n];
-        if (
-          neighbor === -1
-          || cells[neighbor] === types.clay
-          || light[neighbor] >= nl
-        ) {
-          continue;
-        }
-        light[neighbor] = nl;
-        next.push(neighbor);
-      }
-    });
-    queue.length = 0;
-    if (next.length) {
-      this.floodLight(next);
-    }
-  }
-
-  // TODO: Port this into to the C implementation
   updateLight() {
     const { types } = SimulationWASM;
     const {
-      cells: { buffer: cells },
-      light: { buffer: light },
+      cells,
+      light,
+      neighbors,
+      queues,
       width,
       height,
     } = this;
-    light.fill(0);
-    let queue = [];
-    for (let index = 0; index < (width * height); index += 1) {
-      if (cells[index] === types.light) {
-        light[index] = 0xFF;
-        queue.push(index);
-      }
-    }
-    this.floodLight(queue);
+    light.buffer.fill(0);
+    this._updateLight(
+      width * height,
+      types.light,
+      cells.base,
+      light.base,
+      neighbors.base,
+      queues.a.base,
+      queues.b.base,
+    );
   }
 }
 
