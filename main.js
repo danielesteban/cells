@@ -3,13 +3,12 @@ import Renderer from './core/renderer.js';
 import SimulationJS from './simulation/simulationJS.js';
 import SimulationWASM from './simulation/simulationWASM.js';
 
+// Setup
 const Simulation = window.WebAssembly && location.hash.substr(1) !== 'disablewasm' ? (
   SimulationWASM
 ) : (
   SimulationJS
 );
-
-// Setup
 const { types } = Simulation;
 const renderer = new Renderer({
   shader: `
@@ -75,6 +74,13 @@ const renderer = new Renderer({
   ],
 });
 
+const actions = {
+  // These map to mouse buttons
+  erase: 0x02,
+  paint: 0x00,
+};
+const { debug, input } = renderer;
+let lastFrameTime = performance.now();
 let color;
 let light;
 
@@ -139,15 +145,6 @@ renderer.onClear = () => {
   simulation.water.step.buffer.fill(0);
 };
 
-const actions = {
-  // These map to mouse buttons
-  erase: 0x02,
-  paint: 0x00,
-};
-const { debug, input } = renderer;
-let lastFrameTime = performance.now();
-let simulationStep = 0;
-
 // Main loop
 const animate = () => {
   requestAnimationFrame(animate);
@@ -161,7 +158,7 @@ const animate = () => {
   }
 
   const steps = Math.floor(500 * delta);
-  for (let s = 0; s < steps; s += 1, simulationStep += 1) {
+  for (let step = 0; step < steps; step += 1) {
     // Process Input
     if (input.action === actions.erase || input.action === actions.paint) {
       input.brushOffsets.forEach((offset) => {
