@@ -79,9 +79,9 @@ let color;
 let light;
 
 const simulation = new Simulation({
+  wasm: '/simulation/simulation.wasm',
   width: renderer.width,
   height: renderer.height,
-  url: './simulation/simulation.wasm',
   onLoad: ({
     cells: { buffer: cells },
     color: { buffer: colorBuffer },
@@ -183,6 +183,9 @@ const animate = () => {
         if (input.action === actions.erase || input.type === types.air) {
           simulation.cells.buffer[index] = types.air;
           simulation.water.state.buffer[index] = simulation.water.step.buffer[index] = 0;
+          return;
+        }
+        if (input.action !== actions.paint) {
           return;
         }
         switch (input.type) {

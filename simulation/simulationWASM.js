@@ -1,8 +1,8 @@
 class SimulationWASM {
   constructor({
+    wasm,
     width,
     height,
-    url,
     onLoad,
   }) {
     this.width = width;
@@ -20,7 +20,7 @@ class SimulationWASM {
       )) / 65536
     ) + 1;
     const memory = new WebAssembly.Memory({ initial: pages, maximum: pages });    
-    fetch(url)
+    fetch(wasm)
       .then((res) => res.arrayBuffer())
       .then((buffer) => (
         WebAssembly.instantiate(buffer, { env: { memory } })
