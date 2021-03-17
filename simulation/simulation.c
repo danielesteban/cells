@@ -73,7 +73,7 @@ void simulateSand(
 void simulateWater(
   const unsigned int size,
   unsigned char *cells,
-  int *neighbors,
+  const int *neighbors,
   float *state,
   float *step
 ) {
@@ -116,16 +116,11 @@ void simulateWater(
       remainingMass -= flow;
     }
   }
-  
-  const float *last = &state[size - 1];
-  for (; state != last; ++state, ++step) {
-    *state = *step;
-  }
 }
 
 static float waterOutline(
-  unsigned char *cells,
-  float *state,
+  const unsigned char *cells,
+  const float *state,
   const int index
 ) {
   if (index == -1) return 0;
@@ -138,11 +133,11 @@ void updateColor(
   const unsigned int airColor,
   const unsigned int waterColor,
   const unsigned int size,
-  unsigned char *cells,
+  const unsigned char *cells,
   unsigned char *color,
-  int *neighbors,
-  unsigned char *noise,
-  float *state
+  const int *neighbors,
+  const unsigned char *noise,
+  const float *state
 ) {
   unsigned char r, g, b;
   float mass, n, outline, outlineL, outlineR;
@@ -181,9 +176,9 @@ void updateColor(
 }
 
 static void floodLight(
-  unsigned char *cells,
+  const unsigned char *cells,
   unsigned char *light,
-  int *neighbors,
+  const int *neighbors,
   unsigned int *queue,
   const unsigned int size,
   unsigned int *next
@@ -203,8 +198,7 @@ static void floodLight(
         continue;
       }
       light[neighbor] = nl;
-      next[nextLength] = neighbor;
-      nextLength++;
+      next[nextLength++] = neighbor;
     }
   }
   if (nextLength > 0) {
@@ -215,19 +209,19 @@ static void floodLight(
 void updateLight(
   const unsigned int size,
   const unsigned char type,
-  unsigned char *cells,
+  const unsigned char *cells,
   unsigned char *light,
-  int *neighbors,
+  const int *neighbors,
   unsigned int *queueA,
   unsigned int *queueB
 ) {
   unsigned int queueLength = 0;
   for (unsigned int index = 0; index < size; index++) {
-    if (cells[index] == type) {
-      light[index] = 0xFF;
-      queueA[queueLength] = index;
-      queueLength++;
+    if (cells[index] != type) {
+      continue;
     }
+    light[index] = 0xFF;
+    queueA[queueLength++] = index;
   }
   floodLight(cells, light, neighbors, queueA, queueLength, queueB);
 }

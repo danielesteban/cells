@@ -152,6 +152,7 @@ class SimulationWASM {
       water.state.base,
       water.step.base
     );
+    water.state.buffer.set(water.step.buffer);
     this.simulationStep += 1;
   }
 
