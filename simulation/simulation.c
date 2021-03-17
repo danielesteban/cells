@@ -118,15 +118,15 @@ void simulateWater(
   }
 }
 
-static float waterOutline(
+static const float waterOutline(
   const unsigned char *cells,
   const float *state,
   const int index
 ) {
-  if (index == -1) return 0;
-  if (cells[index] != 0) return 0.75; 
-  if (state[index] < minMass) return 1.25; 
-  return 0;
+  if (index == -1) return 0.0f;
+  if (cells[index] != 0) return 0.75f; 
+  if (state[index] < minMass) return 1.25f; 
+  return 0.0f;
 }
 
 void updateColor(
