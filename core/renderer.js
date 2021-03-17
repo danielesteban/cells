@@ -10,7 +10,7 @@ class Renderer {
   }) {
     const dom = document.getElementById('renderer');
     const isMobile = navigator.userAgent.includes('Mobile');
-    const width = isMobile ? 150 : 420;
+    const width = isMobile ? 160 : 420;
     const height = 240;
     this.aspect = width / height;
     this.isMobile = isMobile;
