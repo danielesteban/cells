@@ -25,7 +25,7 @@ function Generator({
         cells[index] = type;
         const { r, g, b, l } = input.colors[type];
         const light = type === types.clay ? (1.25 - n * 0.5) : 1;
-        color.buffer.set([
+        color.set([
           Math.floor((r + (Math.random() - 0.5) * input.noise * 2 * l) * light),
           Math.floor((g + (Math.random() - 0.5) * input.noise * 2 * l) * light),
           Math.floor((b + (Math.random() - 0.5) * input.noise * 2 * l) * light),
