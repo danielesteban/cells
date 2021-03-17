@@ -74,13 +74,12 @@ const renderer = new Renderer({
   ],
 });
 
+const { debug, input } = renderer;
 const actions = {
   // These map to mouse buttons
   erase: 0x02,
   paint: 0x00,
 };
-const { debug, input } = renderer;
-let lastFrameTime = performance.now();
 let color;
 let light;
 
@@ -146,6 +145,7 @@ renderer.onClear = () => {
 };
 
 // Main loop
+let lastFrameTime = performance.now();
 const animate = () => {
   requestAnimationFrame(animate);
 
