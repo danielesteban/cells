@@ -163,7 +163,7 @@ const animate = () => {
   const steps = Math.floor(500 * delta);
   for (let s = 0; s < steps; s += 1, simulationStep += 1) {
     // Process Input
-    if (input.action !== false) {
+    if (input.action === actions.erase || input.action === actions.paint) {
       input.brushOffsets.forEach((offset) => {
         if (Math.random() > 0.5) {
           return;
@@ -183,9 +183,6 @@ const animate = () => {
         if (input.action === actions.erase || input.type === types.air) {
           simulation.cells.buffer[index] = types.air;
           simulation.water.state.buffer[index] = simulation.water.step.buffer[index] = 0;
-          return;
-        }
-        if (input.action !== actions.paint) {
           return;
         }
         switch (input.type) {
