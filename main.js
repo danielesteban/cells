@@ -97,14 +97,18 @@ const simulation = new Simulation({
       buffer: colorBuffer,
       format: 'rgb',
       image: ({ ctx, width, height, isMobile }) => {
-        ctx.shadowBlur = 2;
-        ctx.shadowColor = '#333';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#eee';
+        ctx.strokeStyle = '#222';
         ctx.font = '700 18px monospace';
+        ctx.lineWidth = 4;
+        ctx.strokeText('CELLS', width * 0.5, height * 0.2);
+        ctx.lineWidth = 1;
         ctx.fillText('CELLS', width * 0.5, height * 0.2);
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = '#222';
         ctx.fillStyle = '#666';
-        ctx.font = '700 13px monospace';
+        ctx.font = '700 12px monospace';
         ctx.fillText('dani@gatunes © 2021', width * 0.5, height * 0.3);
         ctx.fillStyle = '#ccc';
         ctx.font = '700 10px monospace';
@@ -123,7 +127,9 @@ const simulation = new Simulation({
       },
     });
     for (let i = 0, l = color.buffer.length; i < l; i += 3) {
-      if (color.buffer[i] || color.buffer[i + 1] || color.buffer[i + 2]) {
+      if (color.buffer[i] === 0x22 && color.buffer[i + 1] === 0x22 && color.buffer[i + 2] === 0x22) {
+        cells[i / 3] = types.light;
+      } else if (color.buffer[i] || color.buffer[i + 1] || color.buffer[i + 2]) {
         cells[i / 3] = types.clay;
       }
     }
