@@ -26,12 +26,12 @@ class SimulationWASM {
         WebAssembly.instantiate(buffer, { env: { memory } })
       ))
       .then(({ instance }) => {
-        this.cellIndex = (x, y) => instance.exports.cellIndex(this.width, this.height, x, y);
-        this.allocate({ instance, memory });
         this._simulateSand = instance.exports.simulateSand;
         this._simulateWater = instance.exports.simulateWater;
         this._updateColor = instance.exports.updateColor;
         this._updateLight = instance.exports.updateLight;
+        this.cellIndex = (x, y) => instance.exports.cellIndex(this.width, this.height, x, y);
+        this.allocate({ heap: instance.exports.__heap_base, memory });
         if (onLoad) {
           onLoad(this);
         }
@@ -40,37 +40,34 @@ class SimulationWASM {
       .catch((e) => console.error(e));
   }
 
-  allocate({
-    instance,
-    memory,
-  }) {
+  allocate({ heap, memory }) {
     const { width, height } = this;
     const size = width * height;
-    let base = instance.exports.__heap_base;
+    let address = heap;
 
     this.cells = {
-      base,
-      buffer: new Uint8ClampedArray(memory.buffer, base, size),
+      address,
+      buffer: new Uint8ClampedArray(memory.buffer, address, size),
     };
-    base += size;
+    address += size;
 
     this.color = {
-      base,
-      buffer: new Uint8ClampedArray(memory.buffer, base, size * 3),
+      address,
+      buffer: new Uint8ClampedArray(memory.buffer, address, size * 3),
     };
-    base += size * 3;
+    address += size * 3;
 
     this.light = {
-      base,
-      buffer: new Uint8ClampedArray(memory.buffer, base, size),
+      address,
+      buffer: new Uint8ClampedArray(memory.buffer, address, size),
     };
-    base += size;
+    address += size;
 
     this.neighbors = {
-      base,
-      buffer: new Int32Array(memory.buffer, base, size * 4),
+      address,
+      buffer: new Int32Array(memory.buffer, address, size * 4),
     };
-    base += size * 4 * Int32Array.BYTES_PER_ELEMENT;
+    address += size * 4 * Int32Array.BYTES_PER_ELEMENT;
     {
       const neighbors = [
         { x: 0, y: -1 },
@@ -89,10 +86,10 @@ class SimulationWASM {
     }
 
     this.noise = {
-      base,
-      buffer: new Uint8ClampedArray(memory.buffer, base, size),
+      address,
+      buffer: new Uint8ClampedArray(memory.buffer, address, size),
     };
-    base += size;
+    address += size;
     {
       for (let i = 0; i < size; i += 1) {
         this.noise.buffer[i] = Math.floor(0xFF * (0.8 + ((Math.random() - 0.5) * 0.02)));
@@ -101,27 +98,27 @@ class SimulationWASM {
 
     this.queues = {
       a: {
-        base,
-        buffer: new Int32Array(memory.buffer, base, size),
+        address,
+        buffer: new Int32Array(memory.buffer, address, size),
       },
       b: {
-        base: base + size * Int32Array.BYTES_PER_ELEMENT,
-        buffer: new Int32Array(memory.buffer, base + size * Int32Array.BYTES_PER_ELEMENT, size),
+        address: address + size * Int32Array.BYTES_PER_ELEMENT,
+        buffer: new Int32Array(memory.buffer, address + size * Int32Array.BYTES_PER_ELEMENT, size),
       }
     };
-    base += size * 2 * Int32Array.BYTES_PER_ELEMENT;
+    address += size * 2 * Int32Array.BYTES_PER_ELEMENT;
 
     this.water = {
       state: {
-        base,
-        buffer: new Float32Array(memory.buffer, base, size),
+        address,
+        buffer: new Float32Array(memory.buffer, address, size),
       },
       step: {
-        base: base + size * Float32Array.BYTES_PER_ELEMENT,
-        buffer: new Float32Array(memory.buffer, base + size * Float32Array.BYTES_PER_ELEMENT, size),
+        address: address + size * Float32Array.BYTES_PER_ELEMENT,
+        buffer: new Float32Array(memory.buffer, address + size * Float32Array.BYTES_PER_ELEMENT, size),
       },
     };
-    base += size * 2 * Float32Array.BYTES_PER_ELEMENT;
+    address += size * 2 * Float32Array.BYTES_PER_ELEMENT;
   }
 
   step() {
@@ -140,17 +137,17 @@ class SimulationWASM {
       height,
       step,
       types.sand,
-      cells.base,
-      color.base,
-      water.state.base,
-      water.step.base
+      cells.address,
+      color.address,
+      water.state.address,
+      water.step.address
     );
     this._simulateWater(
       width * height,
-      cells.base,
-      neighbors.base,
-      water.state.base,
-      water.step.base
+      cells.address,
+      neighbors.address,
+      water.state.address,
+      water.step.address
     );
     water.state.buffer.set(water.step.buffer);
     this.simulationStep += 1;
@@ -170,11 +167,11 @@ class SimulationWASM {
       airColor.r << 16 ^ airColor.g << 8 ^ airColor.b,
       waterColor.r << 16 ^ waterColor.g << 8 ^ waterColor.b,
       width * height,
-      cells.base,
-      color.base,
-      neighbors.base,
-      noise.base,
-      water.state.base
+      cells.address,
+      color.address,
+      neighbors.address,
+      noise.address,
+      water.state.address
     );
   }
 
@@ -192,11 +189,11 @@ class SimulationWASM {
     this._updateLight(
       width * height,
       types.light,
-      cells.base,
-      light.base,
-      neighbors.base,
-      queues.a.base,
-      queues.b.base,
+      cells.address,
+      light.address,
+      neighbors.address,
+      queues.a.address,
+      queues.b.address,
     );
   }
 }
