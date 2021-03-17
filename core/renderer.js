@@ -287,7 +287,6 @@ class Renderer {
       case 'rgb':
         format = GL.RGB;
         if (!buffer) {
-          console.log('ni')
           buffer = new Uint8ClampedArray(width * height * 3);
         }
         if (image) {
