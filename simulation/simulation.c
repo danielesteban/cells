@@ -34,12 +34,12 @@ void simulateSand(
   if (step % 2 != 0) {
     return;
   }
-  int index, target;
+  int target;
   const int nx = step % 4 == 0 ? 1 : -1;
   for (unsigned int y = 0; y < height; y += 1) {
     for (unsigned int sx = 0; sx < width; sx += 1) {
       const unsigned int x = nx == 1 ? sx : (width - 1 - sx);
-      index = cellIndex(width, height, x, y);
+      const int index = cellIndex(width, height, x, y);
       if (cells[index] != type) {
         continue;
       }
@@ -72,25 +72,24 @@ void simulateSand(
 
 void simulateWater(
   const unsigned int size,
-  unsigned char *cells,
+  const unsigned char *cells,
   const int *neighbors,
-  float *state,
+  const float *state,
   float *step
 ) {
-  int index, neighbor;
-  float flow, mass, neighborMass, remainingMass;
+  float flow, remainingMass;
   for (unsigned int index = 0, nIndex = 0; index < size; index++, nIndex += 4) {
     if (cells[index] != 0) {
       continue;
     }
-    mass = state[index];
+    const float mass = state[index];
     remainingMass = mass;
     for (unsigned int n = 0; remainingMass > 0 && n < 4; n += 1) {
-      neighbor = neighbors[nIndex + n];
+      const int neighbor = neighbors[nIndex + n];
       if (neighbor != -1 && cells[neighbor] != 0) {
         continue;
       }
-      neighborMass = neighbor != -1 ? state[neighbor] : 0;
+      const float neighborMass = neighbor != -1 ? state[neighbor] : 0;
       switch (n) {
         case 0: // Down
           flow = getStableState(remainingMass + neighborMass) - neighborMass;
@@ -140,30 +139,30 @@ void updateColor(
   const float *state
 ) {
   unsigned char r, g, b;
-  float mass, n, outline, outlineL, outlineR;
+  float mass, light;
   for (unsigned int index = 0, nIndex = 0; index < size; index++, nIndex += 4) {
     if (cells[index] == 0) {
-      n = noise[index] / 255.0f;
+      const float n = noise[index] / 255.0f;
       r = ((airColor >> 16) & 0xFF) * n;
       g = ((airColor >> 8) & 0xFF) * n;
       b = (airColor & 0xFF) * n;
       mass = state[index];
       if (mass >= minMass) {
-        outlineL = waterOutline(cells, state, neighbors[nIndex + 1]);
-        outlineR = waterOutline(cells, state, neighbors[nIndex + 2]);
-        outline = outlineL > outlineR ? outlineL : outlineR;
-        if (outline == 0.0f) {
-          outline = waterOutline(cells, state, neighbors[nIndex]);
-          if (outline == 0.0f) {
-            outline = waterOutline(cells, state, neighbors[nIndex + 3]);
-            if (outline == 0.0f) {
-              outline = 1;
+        const float outlineL = waterOutline(cells, state, neighbors[nIndex + 1]);
+        const float outlineR = waterOutline(cells, state, neighbors[nIndex + 2]);
+        light = outlineL > outlineR ? outlineL : outlineR;
+        if (light == 0.0f) {
+          light = waterOutline(cells, state, neighbors[nIndex]);
+          if (light == 0.0f) {
+            light = waterOutline(cells, state, neighbors[nIndex + 3]);
+            if (light == 0.0f) {
+              light = 1;
             }
           }
         }
         if (mass < 1.0f) mass = 1.0f;
         if (mass > 1.25f) mass = 1.25f;
-        mass = (2.0f - mass) * outline;
+        mass = (2.0f - mass) * light;
         r = (r + ((waterColor >> 16) & 0xFF) * mass) / 2.0f;
         g = (g + ((waterColor >> 8) & 0xFF) * mass) / 2.0f;
         b = (b + (waterColor & 0xFF) * mass) / 2.0f;
